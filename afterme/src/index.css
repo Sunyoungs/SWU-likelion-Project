@@ -1,0 +1,74 @@
+:root {
+  --pink: #f49eb4;
+  --pink-1: #fdeaf5;
+  --pint-2: #facde6;
+  --pink-3: #f6a6d2;
+  --pink-4: #f27cbd;
+  --pink-6: #eb2f96;
+  --pink-8: #a7216b;
+  --pink-10: #6a1544;
+  --orange: #ffd27a;
+  --orange-1: #fff6e6;
+  --orange-2: #ffeac2;
+  --orange-3: #ffda91;
+  --orange-4: #ffc95e;
+  --orange-6: #ffa900;
+  --orange-8: #b57800;
+  --orange-10: #734c00;
+  --g50: #e8e8e9;
+  --g75: #a2a2a3;
+  --g100: #7c7c7d;
+  --g200: #434345;
+  --g300: #1d1d1f;
+  --g400: #141416;
+  --g500: #121213;
+  --green: #7adbbf;
+  --green-1: #e6f8f2;
+  --green-2: #c2eee0;
+  --green-3: #91e1c8;
+  --green-4: #5ed4ae;
+  --green-6: #00ba7e;
+  --green-8: #008459;
+  --green-10: #005439;
+  --purple: #dc83f4;
+  --purple-1: #f8e7fd;
+  --purple-2: #efc6fa;
+  --purple-3: #e299f6;
+  --purple-4: #d469f2;
+  --purple-6: #bb11ea;
+  --purple-8: #850ca6;
+  --purple-10: #540869;
+  --blue: #a0bcff;
+  --blue-1: #e7f1fe;
+  --blue-2: #c6ddfd;
+  --blue-3: #9ac2fc;
+  --blue-4: #6aa6fa;
+  --blue-6: #1371f7;
+  --blue-8: #0d50af;
+  --blue-10: #09336f;
+  --font-family: 'Pretendard', sans-serif;
+}
+body {
+  margin: 0;
+  padding: 0px;
+  font-family: var(--font-family);
+  background-color: var(--background);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+input {
+  font-family: var(--font-family);
+}
