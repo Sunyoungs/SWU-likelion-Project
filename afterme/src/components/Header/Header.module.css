@@ -1,0 +1,22 @@
+.header {
+  height: 64px;
+  background: linear-gradient(90deg, var(--blue-6) 0%, var(--blue-4) 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  color: white;
+  flex-shrink: 0;
+}
+.logoWrapper h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: bold;
+}
+.profilePlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid var(--blue-2);
+}
