@@ -14,7 +14,7 @@ import QuizSession from './pages/QuizSession';
 import QnA from './pages/QnA';
 import Mypage from './pages/Mypage';
 import Loading from './pages/Loading';
-import Notice from './pages/Notice';
+import Notifications from './pages/Notifications';
 import QnACreate from './pages/QnACreate';
 
 function App() {
@@ -27,7 +27,7 @@ function App() {
           <Route path="/loading" element={<Loading />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<HandoverList />} />
-            <Route path="notice" element={<Notice />} /> {/* 알림 센터는 아직 API 명세서에 없어서 임의로 작성 */}
+            <Route path="notifications" element={<Notifications />} />
             <Route path="mypage" element={<Mypage />} />
             <Route path="handovers/create" element={<HandoverCreate />} />
             <Route path="handovers/:projectId">

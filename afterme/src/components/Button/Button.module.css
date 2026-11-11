@@ -1,0 +1,68 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+.iconWrapper {
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Variants --- */
+.primary {
+  background: linear-gradient(90deg, var(--blue-6) 0%, var(--blue-4) 100%);
+  color: white;
+}
+.primary:hover {
+  filter: brightness(0.9);
+}
+
+.white {
+  background-color: white;
+  color: var(--gray-6);
+  border: 1px solid var(--gray-1);
+}
+.white:hover {
+  background-color: var(--gray-1);
+}
+
+.purple {
+  background: linear-gradient(90deg, var(--purple-6) 0%, var(--purple-4) 100%);
+  color: white;
+}
+.purple:hover {
+  filter: brightness(0.9);
+}
+
+.green {
+  background-color: var(--green-2);
+  color: var(--green-8);
+}
+.green:hover {
+  background-color: var(--green-3);
+}
+
+.gray {
+  background-color: var(--gray-1);
+  color: var(--gray-4);
+}
+.gray:hover {
+  background-color: var(--gray-2);
+}
+
+.pink {
+  background-color: var(--pink-2);
+  color: var(--pink-10);
+}
+.pink:hover {
+  background-color: var(--pink-3);
+}
