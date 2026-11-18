@@ -1,0 +1,29 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* --- Variants --- */
+.active {
+  background: linear-gradient(90deg, var(--blue-6) 0%, var(--blue-4) 100%);
+  color: white;
+  border: none;
+}
+
+.inactive {
+  background-color: white;
+  color: var(--gray-3);
+  border: 1px solid transparent;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.outline {
+  background-color: white;
+  color: var(--blue-6);
+  border: 1px solid var(--blue-4);
+}
