@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Button.module.css';
 
-// variant 종류: 'primary'(파란 그라데이션), 'white'(흰 바탕+테두리), 'purple', 'green' 등
+// variant 종류: 'primary'(파란 그라데이션), 'white'(흰 바탕+테두리), 'deactivate'(회색 비활성), 'purple', 'green' 등
 const Button = ({ text, variant = 'primary', onClick, icon, className = '' }) => {
   return (
     <button 
