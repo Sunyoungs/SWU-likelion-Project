@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
+import ProgressBar from '../components/ProgressBar';
 import QuizNumber from '../components/QuizNumber';
 import QuizOption from '../components/QuizOption';
 import styles from './QuizSession.module.css';
@@ -30,6 +32,8 @@ const TYPE_LABEL = { choice: '객관식', short: '단답형' };
 
 function QuizSession() {
   const { teamName, passingScore, questions } = quizSet;
+  const navigate = useNavigate();
+  const { projectId, quizSetId } = useParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({ });
   const [showError, setShowError] = useState(false);
@@ -63,8 +67,8 @@ function QuizSession() {
   };
 
   const handleSubmit = () => {
-    // TODO: API 연동 시 답안 제출 후 결과 화면으로 이동
-    console.log('제출', answers);
+    // TODO: API 연동 시 답안을 제출하고, 응답으로 받은 attemptId로 이동
+    navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/1`);
   };
 
   const summary = [
@@ -107,9 +111,7 @@ function QuizSession() {
 
           <div className={styles.progress}>
             <p className={styles.progressText}>{answeredCount}/{total} 답변 완료</p>
-            <div className={styles.progressTrack}>
-              <div className={styles.progressFill} style={{ width: `${(answeredCount / total) * 100}%` }} />
-            </div>
+            <ProgressBar value={(answeredCount / total) * 100} />
           </div>
         </aside>
 
