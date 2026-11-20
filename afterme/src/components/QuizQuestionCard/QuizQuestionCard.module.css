@@ -1,0 +1,46 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  border-radius: 5px;
+  border: 1px solid var(--blue-2);
+  background-color: white;
+}
+
+.error {
+  border-color: var(--pink-3);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background-color: var(--blue-6);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: white;
+}
+
+.type {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  color: var(--gray-4);
+}
+
+.question {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
