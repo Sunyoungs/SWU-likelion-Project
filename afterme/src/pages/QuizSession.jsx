@@ -1,42 +1,46 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import QuizNumber from '../components/QuizNumber';
 import QuizOption from '../components/QuizOption';
+import QuizQuestionCard from '../components/QuizQuestionCard';
 import styles from './QuizSession.module.css';
 import CheckIcon from '../assets/images/Quiz_check.svg';
-
-// TODO: API 연동 시 교체. teamName은 비워두고, passingScore는
-// 선임자가 슬라이더로 설정한 통과 기준 값이 내려오도록 연결한다.
-const quizSet = {
-  teamName: '',
-  passingScore: 80,
-  questions: [
-    { id: 1, type: 'choice', category: '상황형', text: '질문 1', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    { id: 2, type: 'choice', category: '상황형', text: '질문 2', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    {
-      id: 3, type: 'choice', category: '상황형', text: '질문 3', options: ['보기 1', '보기 2', '보기 3', '보기 4'],
-    },
-    { id: 4, type: 'choice', category: '상황형', text: '질문 4', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    { id: 5, type: 'choice', category: '상황형', text: '질문 5', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    { id: 6, type: 'choice', category: '상황형', text: '질문 6', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    { id: 7, type: 'choice', category: '상황형', text: '질문 7', options: ['보기 1', '보기 2', '보기 3', '보기 4'] },
-    { id: 8, type: 'short', category: '지식형', text: '질문 8' },
-    { id: 9, type: 'short', category: '지식형', text: '질문 9' },
-    { id: 10, type: 'short', category: '지식형', text: '질문 10' },
-  ],
-};
-
-const TYPE_LABEL = { choice: '객관식', short: '단답형' };
+import { startAttempt, getAttemptQuestions, submitAttempt, TYPE_LABEL } from '../api/quiz';
+import { useApi } from '../hooks/useApi';
 
 function QuizSession() {
+  const { projectId, quizSetId } = useParams();
+
+  // 화면에 들어오면 응시를 시작(POST)하고, 발급된 attemptId로 문항을 조회한다.
+  // 개발 모드(StrictMode)에서 effect가 두 번 실행돼도 응시가 두 번 만들어지지 않도록 요청을 ref에 보관한다.
+  const startRef = useRef(null);
+  const { data, error } = useApi(() => {
+    const key = `${projectId}/${quizSetId}`;
+    if (startRef.current?.key !== key) {
+      const promise = startAttempt(projectId, quizSetId).then(async ({ attemptId }) => ({
+        attemptId,
+        quizSet: await getAttemptQuestions(projectId, quizSetId, attemptId),
+      }));
+      startRef.current = { key, promise };
+    }
+    return startRef.current.promise;
+  }, [projectId, quizSetId]);
+
+  if (error) return <p>퀴즈를 불러오지 못했어요.</p>;
+  if (!data) return null;
+  return <QuizSessionView quizSet={data.quizSet} attemptId={data.attemptId} />;
+}
+
+function QuizSessionView({ quizSet, attemptId }) {
   const { teamName, passingScore, questions } = quizSet;
   const navigate = useNavigate();
   const { projectId, quizSetId } = useParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({ });
   const [showError, setShowError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const total = questions.length;
   const current = questions[currentIndex];
   const isAnswered = (q) => answers[q.id] !== undefined && answers[q.id] !== '';
@@ -66,9 +70,15 @@ function QuizSession() {
     goTo(currentIndex + 1);
   };
 
-  const handleSubmit = () => {
-    // TODO: API 연동 시 답안을 제출하고, 응답으로 받은 attemptId로 이동
-    navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/1`);
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await submitAttempt(projectId, quizSetId, attemptId, answers);
+      navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const summary = [
@@ -116,13 +126,12 @@ function QuizSession() {
         </aside>
 
         <section className={styles.main}>
-          <div className={`${styles.card} ${showError ? styles.cardError : ''}`}>
-            <div className={styles.cardHead}>
-              <span className={styles.qBadge}>Q{currentIndex + 1}</span>
-              <span className={styles.qType}>{TYPE_LABEL[current.type]} · {current.category}</span>
-            </div>
-            <p className={styles.question}>{current.text}</p>
-
+          <QuizQuestionCard
+            number={currentIndex + 1}
+            typeLabel={`${TYPE_LABEL[current.type]} · ${current.category}`}
+            text={current.text}
+            error={showError}
+          >
             {current.type === 'choice' ? (
               <div className={styles.options} role="radiogroup">
                 {current.options.map((option, index) => (
@@ -143,7 +152,7 @@ function QuizSession() {
                 onChange={(e) => setAnswer(e.target.value)}
               />
             )}
-          </div>
+          </QuizQuestionCard>
 
           <div className={styles.navWrap}>
             <p className={styles.errorText} role="alert">

@@ -8,6 +8,8 @@ import CalendarIcon from '../assets/images/Quiz_resultCalendar.svg';
 import CorrectIcon from '../assets/images/Quiz_resultCorrect.svg';
 import WrongIcon from '../assets/images/Quiz_resultWrong.svg';
 import Illust from '../assets/images/Quiz_resultIllust.png';
+import { getAttemptResult } from '../api/quiz';
+import { useApi } from '../hooks/useApi';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -24,37 +26,32 @@ const formatDateWithWeekday = (iso) => {
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${WEEKDAYS[d.getDay()]})`;
 };
 
-// TODO: API 연동 시 교체. teamName은 비워두고, passingScore는
-// 선임자가 슬라이더로 설정한 통과 기준 값이 내려오도록 연결한다.
-// submittedAt, retakeAt은 서버가 내려주는 ISO 시각이다. 재응시 가능일은
-// 서버가 정하므로 프론트에서 제출 시각 + N일로 계산하지 않는다.
-// retakeAt이 null이면(통과 등 재응시 불필요) 재응시 영역을 숨긴다.
-const result = {
-  teamName: '',
-  passingScore: 80,
-  submittedAt: new Date().toISOString(), // mock: 지금 제출
-  attempt: 1,
-  retakeAt: new Date(Date.now() + 3 * DAY_MS).toISOString(), // mock: 3일 뒤
-
-  items: [
-    // 유형·관련 항목·비고는 모두 예시 값 (1~7 객관식, 8~10 주관식)
-    { no: 1, type: '객관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 2, type: '객관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 3, type: '객관식', topic: '예시', correct: false, note: 'AI 평가 : 예시' },
-    { no: 4, type: '객관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 5, type: '객관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 6, type: '객관식', topic: '예시', correct: false, note: 'AI 평가 : 예시' },
-    { no: 7, type: '객관식', topic: '예시', correct: false, note: 'AI 평가 : 예시' },
-    { no: 8, type: '주관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 9, type: '주관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-    { no: 10, type: '주관식', topic: '예시', correct: true, note: 'AI 평가 : 예시' },
-  ],
-};
+// 결과 화면은 단답형을 '주관식'으로 표기한다.
+const RESULT_TYPE_LABEL = { choice: '객관식', short: '주관식' };
 
 function QuizResult() {
+  const { projectId, quizSetId, attemptId } = useParams();
+  const { data: result, error } = useApi(
+    () => getAttemptResult(projectId, quizSetId, attemptId),
+    [projectId, quizSetId, attemptId],
+  );
+
+  if (error) return <p>채점 결과를 불러오지 못했어요.</p>;
+  if (!result) return null;
+  return <QuizResultView result={result} />;
+}
+
+function QuizResultView({ result }) {
   const navigate = useNavigate();
-  const { projectId, quizSetId } = useParams();
-  const { teamName, passingScore, submittedAt, attempt, retakeAt, items } = result;
+  const { projectId, quizSetId, attemptId } = useParams();
+  const { teamName, passingScore, attempt, submittedAt, retakeAt } = result;
+  const items = result.items.map((item, index) => ({
+    no: index + 1,
+    type: RESULT_TYPE_LABEL[item.type],
+    topic: `${item.topicId}. ${item.topicName}`,
+    correct: item.correct,
+    note: item.aiEvaluation,
+  }));
 
   // 남은 일수: 서버가 준 재응시 가능 시각까지 (올림). 0 이하면 지금 재응시 가능
   const retakeInDays = retakeAt ? Math.ceil((new Date(retakeAt) - Date.now()) / DAY_MS) : 0;
@@ -163,8 +160,12 @@ function QuizResult() {
           className={styles.listButton}
           onClick={() => navigate(`/handovers/${projectId}/quizzes`)}
         />
-        {/* TODO: 해설 화면이 정해지면 이동 연결 */}
-        <Button text="해설 보기" variant="primary" className={styles.explainButton} />
+        <Button
+          text="해설 보기"
+          variant="primary"
+          className={styles.explainButton}
+          onClick={() => navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}/explanations`)}
+        />
       </div>
     </div>
   );
