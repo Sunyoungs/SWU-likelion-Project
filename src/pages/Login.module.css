@@ -17,9 +17,9 @@
 .plane {
   display: none;
   position: absolute;
-  top: -232px;
-  left: -470px;
-  width: 850px;
+  top: calc(50% - 430px);
+  left: -370px;
+  width: 650px;
   height: 315px;
   pointer-events: none;
 }

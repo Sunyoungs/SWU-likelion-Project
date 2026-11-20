@@ -3,7 +3,7 @@ import styles from './App.module.css';
 
 import Layout from "./components/Layout";
 import Login from './pages/Login';
-import Join from './pages/Join';
+import Join from './pages/Signup';
 import HandoverList from './pages/HandoverList';
 import HandoverCreate from './pages/HandoverCreate';
 import TaskCreate from './pages/TaskCreate';
