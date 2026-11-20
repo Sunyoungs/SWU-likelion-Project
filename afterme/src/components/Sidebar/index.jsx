@@ -56,7 +56,7 @@ const Sidebar = () => {
         )}
       </div>
       <div className={styles.menuGroup}>
-        <NavLink end to="/notice" className={({ isActive }) => isActive ? `${styles.menuHeader} ${styles.activeHeader}` : styles.menuHeader}>
+        <NavLink end to="/notifications" className={({ isActive }) => isActive ? `${styles.menuHeader} ${styles.activeHeader}` : styles.menuHeader}>
           알림 센터
           <span className={styles.badge}>+2 <span className={styles.redDot}></span></span>
         </NavLink>
