@@ -22,6 +22,21 @@
   font-weight: 500;
 }
 
+.correct {
+  background-color: var(--green-2);
+  border: 1.5px solid var(--green-4);
+  font-weight: 500;
+}
+
+.wrong {
+  background-color: var(--pink-1);
+  border: 1px solid var(--pink-6);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
 .radio {
   flex-shrink: 0;
   width: 18px;

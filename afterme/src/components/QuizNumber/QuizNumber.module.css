@@ -25,3 +25,28 @@
   border-color: var(--blue-6);
   color: white;
 }
+
+/* 해설 화면: 채점 결과 */
+.correct {
+  background-color: var(--green-1);
+  border-color: var(--green-6);
+  color: var(--green-6);
+}
+
+.wrong {
+  background-color: var(--purple-1);
+  border-color: var(--pink-6);
+  color: var(--pink-6);
+}
+
+.currentCorrect {
+  background-color: var(--green-6);
+  border-color: var(--green-6);
+  color: white;
+}
+
+.currentWrong {
+  background-color: var(--pink-6);
+  border-color: var(--pink-6);
+  color: white;
+}
