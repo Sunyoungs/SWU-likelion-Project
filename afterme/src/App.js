@@ -11,6 +11,7 @@ import Interview from './pages/Interview';
 import DocumentViewer from './pages/DocumentViewer';
 import QuizList from './pages/QuizList';
 import QuizSession from './pages/QuizSession';
+import QuizResult from './pages/QuizResult';
 import QnA from './pages/QnA';
 import Mypage from './pages/Mypage';
 import Loading from './pages/Loading';
@@ -38,6 +39,7 @@ function App() {
               <Route path="questions/create" element={<QnACreate />} /> {/* 퀴즈 생성도 API 명세서에 없어서 임의로 작성 */}
               <Route path="quizzes" element={<QuizList />} />
               <Route path="quizzes/:quizSetId/attempts" element={<QuizSession />} />
+              <Route path="quizzes/:quizSetId/attempts/:attemptId" element={<QuizResult />} /> {/* 채점 결과도 API 명세서에 없어서 임의로 작성 */}
             </Route>
           </Route>
         </Routes>

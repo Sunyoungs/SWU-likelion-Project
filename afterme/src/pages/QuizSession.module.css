@@ -87,21 +87,6 @@
   color: var(--gray-6);
 }
 
-.progressTrack {
-  width: 231px;
-  height: 6px;
-  border-radius: 3px;
-  background-color: var(--blue-1);
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  border-radius: 3px;
-  background-color: var(--blue-6);
-  transition: width 0.2s ease-in-out;
-}
-
 .main {
   display: flex;
   flex-direction: column;
