@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import QuizNumber from '../components/QuizNumber';
@@ -23,9 +23,12 @@ function QuizExplanation() {
 
 function QuizExplanationView({ questions, grading, weakAreas }) {
   const navigate = useNavigate();
-  const { projectId } = useParams();
+  const { state } = useLocation();
+  const { projectId, quizSetId, attemptId } = useParams();
   const isCorrect = (q) => grading[q.id].correct;
-  const [currentIndex, setCurrentIndex] = useState(2);
+  // 문서 화면에서 돌아온 경우 보고 있던 문항을 복원한다. (state.questionId)
+  const restoredIndex = questions.findIndex((q) => q.id === state?.questionId);
+  const [currentIndex, setCurrentIndex] = useState(restoredIndex >= 0 ? restoredIndex : 2);
   const current = questions[currentIndex];
   const currentGrading = grading[current.id];
 
@@ -75,12 +78,22 @@ function QuizExplanationView({ questions, grading, weakAreas }) {
             </ul>
           </section>
 
-          {/* TODO: 영역별로 해당 섹션 위치로 이동하도록 연결 */}
+          {/* TODO: 인수인계서 열람 화면이 만들어지면 topicId에 해당하는 섹션 위치로 이동 */}
           <Button
             text="해당 섹션 다시 읽기"
             variant="primary"
             className={styles.readButton}
-            onClick={() => navigate(`/handovers/${projectId}/documents`)}
+            onClick={() =>
+              navigate(`/handovers/${projectId}/documents`, {
+                state: {
+                  topicId: current.topicId,
+                  returnTo: {
+                    path: `/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}/explanations`,
+                    state: { questionId: current.id },
+                  },
+                },
+              })
+            }
           />
         </aside>
 
