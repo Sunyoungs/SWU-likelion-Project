@@ -112,6 +112,10 @@
   color: white;
 }
 
+.badgePassed {
+  background-color: var(--blue-6);
+}
+
 .note {
   margin: 0;
   font-size: 14px;
