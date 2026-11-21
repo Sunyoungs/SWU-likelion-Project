@@ -89,12 +89,14 @@ function QuizResultView({ result }) {
             </div>
             <div className={styles.scoreRow}>
               <span className={styles.score}>{score} / {total}</span>
-              <span className={styles.badge}>{passed ? '통과' : '미달'}</span>
+              <span className={`${styles.badge} ${passed ? styles.badgePassed : ''}`}>
+                {passed ? '달성' : '미달'}
+              </span>
             </div>
             <ProgressBar value={(score / total) * 100} />
             <p className={styles.note}>
               통과 기준 {passCount} / {total}
-              {passed ? ' · 기준을 충족했어요' : ` · ${shortage}문항이 부족해요`}
+              {passed ? ' · 기준을 채웠어요!' : ` · ${shortage}문항이 부족해요`}
             </p>
           </div>
 
@@ -105,11 +107,17 @@ function QuizResultView({ result }) {
               <div className={styles.retakeBlock}>
                 <div className={styles.blockLabel}>
                   <img src={CalendarIcon} alt="" className={styles.calendarIcon} />
-                  <span>재응시 가능일</span>
+                  <span>{passed ? '다음 시험일' : '재응시 가능일'}</span>
                 </div>
                 <p className={styles.retakeDate}>{formatDateWithWeekday(retakeAt)}</p>
                 <p className={styles.note}>
-                  {canRetake ? '지금 다시 응시할 수 있어요' : `${retakeInDays}일 후부터 다시 응시할 수 있어요`}
+                  {passed
+                    ? canRetake
+                      ? '지금 2차 테스트를 응시할 수 있어요'
+                      : `${retakeInDays}일 후 2차 테스트를 응시할 수 있어요`
+                    : canRetake
+                      ? '지금 다시 응시할 수 있어요'
+                      : `${retakeInDays}일 후부터 다시 응시할 수 있어요`}
                 </p>
               </div>
             </>
@@ -118,8 +126,8 @@ function QuizResultView({ result }) {
 
         {retakeAt && (
           <Button
-            text={canRetake ? '재응시' : `재응시 (${retakeInDays}일 후)`}
-            variant={canRetake ? 'primary' : 'white'}
+            text={passed ? '2차 테스트 보기' : canRetake ? '재응시' : `재응시 (${retakeInDays}일 후)`}
+            variant={canRetake && !passed ? 'primary' : 'white'}
             className={styles.retakeButton}
             onClick={canRetake ? () => navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts`) : undefined}
           />
