@@ -51,6 +51,14 @@
   background-color: var(--green-3);
 }
 
+/* 비활성처럼 보이지만 클릭은 가능 (예: 답을 선택하지 않은 '다음 문제') */
+.deactivate {
+  background-color: var(--gray-1);
+  color: var(--gray-3);
+  font-weight: 700;
+  border: 1px solid var(--gray-1);
+}
+
 .gray {
   background-color: var(--gray-1);
   color: var(--gray-4);
