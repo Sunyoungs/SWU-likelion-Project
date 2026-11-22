@@ -1,0 +1,185 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+  max-width: 967px;
+  margin: 0 auto;
+  letter-spacing: -0.25px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+
+.unanswered {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  margin: 0;
+  padding: 0 12px;
+  background-color: var(--blue-1);
+  font-size: 16px;
+  color: var(--blue-6);
+}
+
+.listArea {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  width: 100%;
+}
+
+/* --- 필터 · 정렬 --- */
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sort {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 106px;
+}
+
+.sortSelect {
+  width: 100%;
+  padding: 8px 34px 8px 14px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--blue-2);
+  font-family: var(--font-family);
+  font-size: 12px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+  appearance: none;
+  cursor: pointer;
+}
+
+.sortArrow {
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
+}
+
+/* --- 질문 목록 --- */
+.row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 200px 78px 72px;
+  align-items: center;
+  padding: 0 32px 0 14px;
+}
+
+/* 상태와 질문 사이 42px, 질문과 관련 항목 사이 40px */
+.row > :nth-child(2) {
+  padding: 0 40px 0 42px;
+}
+
+.headRow {
+  height: 37px;
+  border: 1px solid var(--blue-3);
+  border-radius: 5px;
+  background-color: var(--blue-1);
+  font-size: 14px;
+  color: var(--blue-10);
+}
+
+.statusHead {
+  text-align: center;
+}
+
+.bodyRow {
+  height: 64px;
+  border-bottom: 1px solid var(--blue-2);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.bodyRow:hover {
+  background-color: var(--blue-2);
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 42px;
+}
+
+.questionTitle,
+.questionContent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.questionTitle {
+  font-size: 14px;
+  color: var(--gray-6);
+}
+
+.questionContent {
+  font-size: 12px;
+  color: var(--gray-4);
+}
+
+.topic {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gray-6);
+}
+
+.author {
+  white-space: nowrap;
+  color: black;
+}
+
+.dateCell {
+  text-align: center;
+}
+
+/* --- 질문이 없을 때 --- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+  text-align: center;
+}
+
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 130px;
+  border-radius: 5px;
+  background-color: var(--blue-1);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: black;
+}
+
+.emptyDesc {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gray-2);
+}

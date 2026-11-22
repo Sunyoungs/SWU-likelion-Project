@@ -1,5 +1,9 @@
 // 백엔드 연동 전 임시 데이터. API 연동 시 이 파일의 값을 서버 응답으로 교체한다.
 
+// 로그인한 사용자의 역할. 화면 확인용으로 값을 바꿔 가며 쓴다.
+// 'predecessor'(전임자) | 'successor'(후임자)
+export const mockRole = 'successor';
+
 // 영역(topic). id는 서버가 정한다.
 export const mockTopics = {
   1: '예외 상황 및 유의사항',
@@ -89,3 +93,48 @@ export const mockQuizWeakAreas = Object.keys(mockTopics).map((key) => {
     total: group.length,
   };
 });
+
+// 팀 이름. 인수인계 프로젝트 정보에서 서버가 내려준다 (예시 값)
+export const mockTeamName = '팀 이름 예시';
+
+export const mockPredecessorName = '김철수';
+export const mockSuccessorName = '홍길동';
+
+// 질문 목록 저장소. 등록·수정·답변 mock이 이 배열을 직접 바꾼다.
+// status: 'unresolved'(미해결) | 'resolved'(해결됨)
+// 제목·설명·작성자는 예시 값이고, createdAt(등록 일시)은 서버가 내려준다.
+const HOUR_MS = 60 * 60 * 1000;
+const qnaNow = Date.now();
+const iso = (ms) => new Date(ms).toISOString();
+const mockAnswer = (topicId, ms) => ({
+  authorName: mockPredecessorName,
+  content: '답변 예시',
+  createdAt: iso(ms),
+  // 답변이 반영된 인수인계서 정보 (서버 제공)
+  reflection: { version: 'v1.2', topicId, topicName: mockTopics[topicId] },
+});
+const mockQuestion = (threadId, topicId, ms, answered) => ({
+  threadId,
+  status: answered ? 'resolved' : 'unresolved',
+  title: '제목',
+  content: '설명',
+  topicId,
+  topicName: mockTopics[topicId],
+  authorName: mockSuccessorName,
+  createdAt: iso(ms),
+  attachments: [],
+  answer: answered ? mockAnswer(topicId, ms + HOUR_MS) : null,
+});
+
+export const mockQuestionList = [
+  {
+    ...mockQuestion(1, 3, qnaNow, false),
+    // 첨부 예시. url은 서버가 내려주는 파일 주소 (예시라 비워 둠 → 칩만 표시되고 열리지 않음)
+    attachments: [{ id: 1, name: '첨부파일 예시.pdf', size: 348 * 1024, contentType: 'application/pdf', url: null }],
+  },
+  mockQuestion(2, 4, qnaNow - 3 * HOUR_MS, false),
+  mockQuestion(3, 5, qnaNow - 12 * HOUR_MS, true),
+  mockQuestion(4, 2, qnaNow - 24 * HOUR_MS, true),
+];
+
+export const createMockAnswer = mockAnswer;
