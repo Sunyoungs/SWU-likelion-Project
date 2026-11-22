@@ -255,6 +255,13 @@
   white-space: pre-wrap;
 }
 
+.attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .bubbleAnswer {
   border-color: var(--blue-3);
   background-color: var(--blue-1);

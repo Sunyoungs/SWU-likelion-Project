@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
+import AttachmentItem from '../components/AttachmentItem';
 import styles from './QnACreate.module.css';
 import ArrowIcon from '../assets/images/QnA_sortArrow.svg';
 import UploadIcon from '../assets/images/QnA_upload.svg';
-import FileImageIcon from '../assets/images/QnA_fileImage.svg';
-import FileRemoveIcon from '../assets/images/QnA_fileRemove.svg';
 import InfoIcon from '../assets/images/QnA_info.svg';
 import BulletIcon from '../assets/images/QnA_bullet.svg';
 import {
@@ -22,10 +21,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.gif';
 const CONTENT_PLACEHOLDER =
   '질문 내용을 구체적으로 입력하세요.\n관련 업무 항목이나 상황을 함께 적으면 전임자가 더 정확하게 답변할 수 있습니다.';
-
-// 348000 → '348KB'
-const formatSize = (bytes) =>
-  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
 
 // 질문 등록(/questions/create)과 질문 수정(/questions/:threadId/edit)이 함께 쓰는 화면
 function QnACreate() {
@@ -108,8 +103,19 @@ function QnAForm({ me, topics, question }) {
 
   // 화면에 보여줄 첨부 목록: 기존 첨부 + 새 파일
   const fileItems = [
-    ...attachments.map((a, i) => ({ key: `a-${i}`, name: a.name, size: a.size, remove: () => setAttachments((prev) => prev.filter((_, j) => j !== i)) })),
-    ...files.map((f, i) => ({ key: `f-${i}`, name: f.name, size: f.size, remove: () => setFiles((prev) => prev.filter((_, j) => j !== i)) })),
+    ...attachments.map((a, i) => ({
+      key: `a-${a.id ?? i}`,
+      name: a.name,
+      size: a.size,
+      href: a.url,
+      remove: () => setAttachments((prev) => prev.filter((_, j) => j !== i)),
+    })),
+    ...files.map((f, i) => ({
+      key: `f-${i}`,
+      name: f.name,
+      size: f.size,
+      remove: () => setFiles((prev) => prev.filter((_, j) => j !== i)),
+    })),
   ];
 
   return (
@@ -228,18 +234,7 @@ function QnAForm({ me, topics, question }) {
               />
 
               {fileItems.map((item) => (
-                <div key={item.key} className={styles.file}>
-                  <div className={styles.fileInfo}>
-                    <span className={styles.fileIcon}>
-                      <img src={FileImageIcon} alt="" />
-                    </span>
-                    <span className={styles.fileName}>{item.name}</span>
-                    <span className={styles.fileSize}>{formatSize(item.size)}</span>
-                  </div>
-                  <button type="button" className={styles.fileRemove} onClick={item.remove} aria-label={`${item.name} 삭제`}>
-                    <img src={FileRemoveIcon} alt="" />
-                  </button>
-                </div>
+                <AttachmentItem key={item.key} name={item.name} size={item.size} href={item.href} onRemove={item.remove} />
               ))}
             </div>
           </div>
