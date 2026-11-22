@@ -1,0 +1,18 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="25.7144" height="34.2859" viewBox="0 0 25.7144 34.2859" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 47">
+<ellipse id="Ellipse 11" cx="12.8571" cy="24.2859" rx="12.8571" ry="10" fill="url(#paint0_linear_0_100)"/>
+<circle id="Ellipse 12" cx="12.8567" cy="6.42857" r="6.42857" fill="url(#paint1_linear_0_100)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_100" x1="22.8571" y1="34.2859" x2="8.84057" y2="10.7262" gradientUnits="userSpaceOnUse">
+<stop stop-color="#1C5BE8"/>
+<stop offset="0.25" stop-color="#1371F7"/>
+<stop offset="1" stop-color="#A0BCFF"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_100" x1="19.2853" y1="12.8571" x2="6.42812" y2="7.66345e-07" gradientUnits="userSpaceOnUse">
+<stop stop-color="#1C5BE8"/>
+<stop offset="0.25" stop-color="#1371F7"/>
+<stop offset="1" stop-color="#A0BCFF"/>
+</linearGradient>
+</defs>
+</svg>

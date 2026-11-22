@@ -1,40 +1,47 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Tag from '../components/Tag';
+import QnAStatus from '../components/QnAStatus';
 import styles from './QnA.module.css';
 import SortArrow from '../assets/images/QnA_sortArrow.svg';
 import EmptyPlane from '../assets/images/QnA_emptyPlane.svg';
-import { getQuestionList, SORT_OPTIONS, STATUS_LABEL } from '../api/questions';
+import { getMyRole, getQuestionList, SORT_OPTIONS, STATUS_LABEL, formatRelativeTime } from '../api/questions';
 import { useApi } from '../hooks/useApi';
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
-
-// 서버가 준 등록 일시 → '방금' / 'N분 전' / 'N시간 전' / 'N일 전'
-const formatRelativeTime = (iso) => {
-  const diff = Date.now() - new Date(iso).getTime();
-  if (diff < MINUTE_MS) return '방금';
-  if (diff < HOUR_MS) return `${Math.floor(diff / MINUTE_MS)}분 전`;
-  if (diff < DAY_MS) return `${Math.floor(diff / HOUR_MS)}시간 전`;
-  return `${Math.floor(diff / DAY_MS)}일 전`;
+// 역할별 문구. 전임자는 답변할 질문을, 후임자는 내가 올린 질문을 본다.
+// (후임자 목록은 디자인이 없어서 전임자 목록과 같은 형태로 문구만 바꿨다)
+const ROLE_TEXT = {
+  predecessor: {
+    allFilter: '내가 답변해야 할 질문',
+    pending: (n) => `답하지 않은 질문 ${n}개`,
+    emptyTitle: '아직 후임자의 질문이 없어요.',
+    emptyDesc: '후임자는 자유롭게 전임자에게 질문을 남겨 주세요.',
+  },
+  successor: {
+    allFilter: '내가 한 질문',
+    pending: (n) => `답변을 기다리는 질문 ${n}개`,
+    emptyTitle: '아직 등록한 질문이 없어요.',
+    emptyDesc: '궁금한 점이 있다면 전임자에게 질문을 남겨 주세요.',
+  },
 };
 
-// 'all'은 '내가 답변해야 할 질문' 전체
-const FILTERS = [
-  { value: 'all', label: '내가 답변해야 할 질문' },
-  { value: 'unresolved', label: STATUS_LABEL.unresolved },
-  { value: 'resolved', label: STATUS_LABEL.resolved },
-];
-
 function QnA() {
+  const navigate = useNavigate();
   const { projectId } = useParams();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('latest');
+  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
   const { data: questions, error } = useApi(
     () => getQuestionList(projectId, { sort }),
     [projectId, sort],
   );
+
+  const text = ROLE_TEXT[me?.role] ?? ROLE_TEXT.predecessor;
+  const filters = [
+    { value: 'all', label: text.allFilter },
+    { value: 'unresolved', label: STATUS_LABEL.unresolved },
+    { value: 'resolved', label: STATUS_LABEL.resolved },
+  ];
 
   const list = questions ?? [];
   const counts = {
@@ -47,16 +54,18 @@ function QnA() {
   const filterLabel = ({ value, label }) =>
     value === 'all' || list.length === 0 ? label : `${label} ${counts[value]}`;
 
+  if (!me) return null;
+
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Q&amp;A</h1>
 
-      <p className={styles.unanswered}>답하지 않은 질문 {counts.unresolved}개</p>
+      <p className={styles.unanswered}>{text.pending(counts.unresolved)}</p>
 
       <div className={styles.listArea}>
         <div className={styles.toolbar}>
           <div className={styles.filters}>
-            {FILTERS.map((f) => (
+            {filters.map((f) => (
               <Tag
                 key={f.value}
                 text={filterLabel(f)}
@@ -90,11 +99,15 @@ function QnA() {
             <span role="columnheader" className={styles.dateCell}>등록</span>
           </div>
 
-          {/* TODO: 질문 상세 화면이 생기면 행 클릭 시 /handovers/:projectId/questions/:threadId 로 이동 */}
           {visible.map((q) => (
-            <div role="row" key={q.threadId} className={`${styles.row} ${styles.bodyRow}`}>
+            <div
+              role="row"
+              key={q.threadId}
+              className={`${styles.row} ${styles.bodyRow}`}
+              onClick={() => navigate(`/handovers/${projectId}/questions/${q.threadId}`)}
+            >
               <span role="cell">
-                <span className={`${styles.status} ${styles[q.status] ?? ''}`}>{STATUS_LABEL[q.status]}</span>
+                <QnAStatus variant={q.status} />
               </span>
               <span role="cell" className={styles.question}>
                 <span className={styles.questionTitle}>{q.title}</span>
@@ -114,8 +127,8 @@ function QnA() {
             <div className={styles.emptyIcon}>
               <img src={EmptyPlane} alt="" />
             </div>
-            <p className={styles.emptyTitle}>아직 후임자의 질문이 없어요.</p>
-            <p className={styles.emptyDesc}>후임자는 자유롭게 전임자에게 질문을 남겨 주세요.</p>
+            <p className={styles.emptyTitle}>{text.emptyTitle}</p>
+            <p className={styles.emptyDesc}>{text.emptyDesc}</p>
           </div>
         )}
       </div>

@@ -18,6 +18,7 @@ import Mypage from './pages/Mypage';
 import Loading from './pages/Loading';
 import Notifications from './pages/Notifications';
 import QnACreate from './pages/QnACreate';
+import QnADetail from './pages/QnADetail';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Route path="documents" element={<DocumentViewer />} />
               <Route path="questions" element={<QnA />} />
               <Route path="questions/create" element={<QnACreate />} /> {/* 퀴즈 생성도 API 명세서에 없어서 임의로 작성 */}
+              <Route path="questions/:threadId" element={<QnADetail />} />
               <Route path="questions/:threadId/edit" element={<QnACreate />} /> {/* 질문 수정 화면 (PATCH questions/{threadId}) */}
               <Route path="quizzes" element={<QuizList />} />
               <Route path="quizzes/:quizSetId/attempts" element={<QuizSession />} />

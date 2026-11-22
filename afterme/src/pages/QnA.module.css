@@ -103,30 +103,11 @@
   height: 64px;
   border-bottom: 1px solid var(--blue-2);
   font-size: 16px;
+  cursor: pointer;
 }
 
 .bodyRow:hover {
   background-color: var(--blue-2);
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 35px;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-}
-
-.unresolved {
-  background-color: var(--pink-6);
-}
-
-.resolved {
-  background-color: var(--green-6);
 }
 
 .question {
