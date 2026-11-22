@@ -4,6 +4,7 @@
   gap: 28px;
   max-width: 970px;
   margin: 0 auto;
+  container-type: inline-size; /* 좁은 화면 대응 (요약 카드 줄바꿈) */
 }
 
 .head {
@@ -152,6 +153,49 @@
   padding: 12px 20px;
   font-weight: 400;
   white-space: nowrap;
+}
+
+/* 요약 카드가 한 줄에 안 들어가는 폭: 재응시 버튼을 '재응시 가능일' 블록 아래(같은 시작선)로 내린다 */
+@container (max-width: 940px) {
+  .summary {
+    display: grid;
+    grid-template-columns: 231px auto;
+    justify-content: start;
+    align-items: start;
+    column-gap: 56px;
+    row-gap: 16px;
+    height: auto;
+    min-height: 200px;
+  }
+
+  .summaryInfo {
+    display: contents; /* 점수·재응시 블록을 summary 그리드의 칸으로 바로 배치 */
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .retakeBlock {
+    width: auto;
+  }
+
+  .summary .retakeButton {
+    grid-column: 2;
+    justify-self: start;
+    align-self: start;
+  }
+}
+
+/* 더 좁으면 한 열로 쌓는다 */
+@container (max-width: 640px) {
+  .summary {
+    grid-template-columns: auto;
+  }
+
+  .summary .retakeButton {
+    grid-column: 1;
+  }
 }
 
 /* --- 문항별 결과 --- */
