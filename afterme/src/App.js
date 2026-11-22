@@ -3,7 +3,7 @@ import styles from './App.module.css';
 
 import Layout from "./components/Layout";
 import Login from './pages/Login';
-import Join from './pages/Join';
+import Signup from './pages/Signup';
 import HandoverList from './pages/HandoverList';
 import HandoverCreate from './pages/HandoverCreate';
 import TaskCreate from './pages/TaskCreate';
@@ -24,11 +24,13 @@ function App() {
     <BrowserRouter>
       <div className={styles.appWrapper}>
         <Routes>
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/join" element={<Join />} />
+          <Route path="/join" element={<Signup />} />
           <Route path="/loading" element={<Loading />} />
-          <Route path="/" element={<Layout />}>
-            <Route index element={<HandoverList />} />
+
+          <Route element={<Layout />}>
+            <Route path="/handovers" element={<HandoverList />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="mypage" element={<Mypage />} />
             <Route path="handovers/create" element={<HandoverCreate />} />

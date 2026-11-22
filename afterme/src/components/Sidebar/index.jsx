@@ -22,7 +22,7 @@ const Sidebar = () => {
         </div>
         {isHandoverOpen && (
           <div className={styles.subMenu}>
-            <NavLink end to="/" className={({ isActive }) => isActive ? `${styles.subItem} ${styles.activeSub}` : styles.subItem}>
+            <NavLink end to="/handovers" className={({ isActive }) => isActive ? `${styles.subItem} ${styles.activeSub}` : styles.subItem}>
               인수인계 목록
             </NavLink>
             <NavLink end to="/handovers/create" className={({ isActive }) => isActive ? `${styles.subItem} ${styles.activeSub}` : styles.subItem}>
