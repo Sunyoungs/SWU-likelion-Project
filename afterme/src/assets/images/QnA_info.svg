@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="icon_info">
+<path id="Vector" d="M27 14C27 21.1797 21.1797 27 14 27C6.8203 27 1 21.1797 1 14C1 6.8203 6.8203 1 14 1C21.1797 1 27 6.8203 27 14Z" stroke-width="2" stroke-linecap="round" stroke="#1371F7"/>
+<path id="Vector_2" d="M14 12.5556V21.2222" stroke-width="2" stroke-linecap="round" stroke="#1371F7"/>
+<g id="Vector_3">
+<use xlink:href="#stroke0_0_69" fill="#1371F7"/>
+<mask id="stroke1_0_69" fill="white">
+<use xlink:href="#stroke0_0_69"/>
+</mask>
+<path d="M15.5894 8.2228C15.5894 9.10031 14.878 9.81169 14.0005 9.81169C13.123 9.81169 12.4117 9.10031 12.4117 8.2228C12.4117 7.34528 13.123 6.6339 14.0005 6.6339C14.878 6.6339 15.5894 7.34528 15.5894 8.2228Z" stroke-width="4" stroke-linecap="round" stroke="#1371F7" mask="url(#stroke1_0_69)"/>
+</g>
+</g>
+<defs>
+<path id="stroke0_0_69" d="M14.0005 9.81169C14.878 9.81169 15.5894 9.10031 15.5894 8.2228C15.5894 7.34528 14.878 6.6339 14.0005 6.6339C13.123 6.6339 12.4117 7.34528 12.4117 8.2228C12.4117 9.10031 13.123 9.81169 14.0005 9.81169Z"/>
+</defs>
+</svg>
