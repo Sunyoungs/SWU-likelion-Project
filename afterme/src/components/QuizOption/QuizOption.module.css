@@ -1,0 +1,49 @@
+.option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 5px;
+  border: 1px solid var(--blue-1);
+  background-color: white;
+  box-shadow: 4px 4px 5px rgba(124, 124, 125, 0.15);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+  text-align: left;
+}
+
+.selected {
+  background-color: var(--blue-2);
+  border: 1.5px solid var(--blue-4);
+  font-weight: 500;
+}
+
+.correct {
+  background-color: var(--green-2);
+  border: 1.5px solid var(--green-4);
+  font-weight: 500;
+}
+
+.wrong {
+  background-color: var(--pink-1);
+  border: 1px solid var(--pink-6);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.radio {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}

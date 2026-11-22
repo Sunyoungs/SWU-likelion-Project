@@ -1,0 +1,230 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 970px;
+  margin: 0 auto;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: -0.25px;
+  color: var(--gray-3);
+}
+
+/* --- 결과 요약 카드 --- */
+.summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 200px;
+  padding: 30px;
+  border: 2px solid var(--blue-2);
+  border-radius: 20px;
+  background-color: white;
+  box-shadow: 4px 4px 5px rgba(124, 124, 125, 0.15);
+}
+
+.illust {
+  position: absolute;
+  top: -74px;
+  right: -76px;
+  width: 183px;
+  height: 140px;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.summaryInfo {
+  display: flex;
+  align-items: center;
+  gap: 136px;
+}
+
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 231px;
+}
+
+.blockLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  font-size: 16px;
+  letter-spacing: -0.25px;
+  color: var(--gray-4);
+}
+
+.statsIcon {
+  width: 20px;
+  height: 24px;
+  margin: 3px 5px;
+}
+
+.calendarIcon {
+  width: 30px;
+  height: 30px;
+}
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 203px;
+}
+
+.score {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--gray-10);
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 23px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background-color: var(--purple-4);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: white;
+}
+
+.badgePassed {
+  background-color: var(--blue-6);
+}
+
+.note {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.25px;
+  color: var(--gray-10);
+}
+
+.divider {
+  width: 2px;
+  height: 102px;
+  margin-right: -90px;
+  background-color: var(--blue-2);
+}
+
+.retakeBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 250px;
+}
+
+.retakeDate {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--gray-6);
+  white-space: nowrap;
+}
+
+.summary .retakeButton {
+  align-self: center;
+  min-width: 130px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* --- 문항별 결과 --- */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.resultsTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: black;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 74px 140px 226px 98px 1fr;
+  align-items: center;
+  padding: 10px 15px;
+  letter-spacing: -0.25px;
+}
+
+.headRow {
+  border: 1px solid var(--blue-3);
+  border-radius: 5px;
+  background-color: var(--blue-1);
+  font-size: 14px;
+  color: var(--blue-10);
+}
+
+.bodyRow {
+  border-bottom: 1px solid var(--gray-1);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--gray-6);
+}
+
+.resultCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resultIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.remark {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--gray-3);
+}
+
+/* --- 하단 버튼 --- */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 52px; /* 문항별 결과와 80px 간격 (page gap 28px 포함) */
+}
+
+.listButton {
+  width: 130px;
+}
+
+.page .explainButton {
+  width: 240px;
+  height: 56px;
+  padding: 12px 28px;
+  font-size: 20px;
+  font-weight: 700;
+}
