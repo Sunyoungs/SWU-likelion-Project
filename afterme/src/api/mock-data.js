@@ -127,7 +127,11 @@ const mockQuestion = (threadId, topicId, ms, answered) => ({
 });
 
 export const mockQuestionList = [
-  mockQuestion(1, 3, qnaNow, false),
+  {
+    ...mockQuestion(1, 3, qnaNow, false),
+    // 첨부 예시. url은 서버가 내려주는 파일 주소 (예시라 비워 둠 → 칩만 표시되고 열리지 않음)
+    attachments: [{ id: 1, name: '첨부파일 예시.pdf', size: 348 * 1024, contentType: 'application/pdf', url: null }],
+  },
   mockQuestion(2, 4, qnaNow - 3 * HOUR_MS, false),
   mockQuestion(3, 5, qnaNow - 12 * HOUR_MS, true),
   mockQuestion(4, 2, qnaNow - 24 * HOUR_MS, true),

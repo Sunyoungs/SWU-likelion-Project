@@ -15,6 +15,18 @@ const mockResponse = (data) => Promise.resolve(data);
 const notFound = () => Promise.reject(new Error('RESOURCE_NOT_FOUND'));
 const findQuestion = (threadId) => mockQuestionList.find((q) => q.threadId === Number(threadId));
 
+// 첨부: 서버는 업로드한 파일의 주소(url)를 내려준다고 가정한다.
+// mock에서는 브라우저 임시 주소(createObjectURL)로 대신하며, 새로고침하면 사라진다.
+let nextAttachmentId = 100;
+const toMockAttachments = (files) =>
+  files.map((f) => ({
+    id: nextAttachmentId++,
+    name: f.name,
+    size: f.size,
+    contentType: f.type,
+    url: URL.createObjectURL(f),
+  }));
+
 // ---------- 표기 · 유틸 ----------
 
 export const ROLE_LABEL = { predecessor: '전임자', successor: '후임자' };
@@ -70,6 +82,7 @@ export function getQuestionList(projectId, { sort = 'latest' } = {}) {
 // 질문과 답변 상세 조회
 // GET /handovers/{projectId}/questions/{threadId}
 // 응답: { threadId, status, title, content, topicId, topicName, authorName, createdAt, attachments,
+//        attachments: [{ id, name, size, contentType, url }],
 //        document: { topicId, topicName, excerpt },
 //        answer: { authorName, content, createdAt, reflection: { version, topicId, topicName } } | null }
 export function getQuestionDetail(projectId, threadId) {
@@ -101,7 +114,7 @@ export function createQuestion(projectId, { topicId, title, content, files = [] 
     topicName: mockTopics[topicId],
     authorName: mockSuccessorName,
     createdAt: new Date().toISOString(),
-    attachments: files.map((f) => ({ name: f.name, size: f.size })),
+    attachments: toMockAttachments(files),
     answer: null,
   });
   return mockResponse({ threadId });
@@ -119,7 +132,7 @@ export function updateQuestion(projectId, threadId, { topicId, title, content, f
     topicName: mockTopics[topicId],
     title,
     content,
-    attachments: [...attachments, ...files.map((f) => ({ name: f.name, size: f.size }))],
+    attachments: [...attachments, ...toMockAttachments(files)],
   });
   return mockResponse(null);
 }

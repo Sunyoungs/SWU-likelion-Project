@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import QnAStatus from '../components/QnAStatus';
+import AttachmentItem from '../components/AttachmentItem';
 import styles from './QnADetail.module.css';
 import BackIcon from '../assets/images/QnA_back.svg';
 import DocumentIcon from '../assets/images/QnA_document.svg';
@@ -207,6 +208,13 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
 
                     <ThreadMessage role="successor" authorName={detail.authorName} createdAt={detail.createdAt}>
                       <p className={styles.bubble}>{detail.content}</p>
+                      {detail.attachments?.length > 0 && (
+                        <div className={styles.attachments}>
+                          {detail.attachments.map((file) => (
+                            <AttachmentItem key={file.id} name={file.name} size={file.size} href={file.url} />
+                          ))}
+                        </div>
+                      )}
                     </ThreadMessage>
 
                     {detail.answer && (
