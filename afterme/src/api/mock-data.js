@@ -89,3 +89,14 @@ export const mockQuizWeakAreas = Object.keys(mockTopics).map((key) => {
     total: group.length,
   };
 });
+
+// Q&A 질문 목록. 제목·설명·작성자는 예시 값이고, createdAt(등록 일시)은 서버가 내려준다.
+// status: 'unresolved'(미해결) | 'resolved'(해결됨)
+const HOUR_MS = 60 * 60 * 1000;
+const qnaNow = Date.now();
+export const mockQuestionList = [
+  { threadId: 1, status: 'unresolved', title: '제목', content: '설명', topicId: 3, topicName: mockTopics[3], authorName: '홍길동', createdAt: new Date(qnaNow).toISOString() },
+  { threadId: 2, status: 'unresolved', title: '제목', content: '설명', topicId: 4, topicName: mockTopics[4], authorName: '홍길동', createdAt: new Date(qnaNow - 3 * HOUR_MS).toISOString() },
+  { threadId: 3, status: 'resolved', title: '제목', content: '설명', topicId: 5, topicName: mockTopics[5], authorName: '홍길동', createdAt: new Date(qnaNow - 12 * HOUR_MS).toISOString() },
+  { threadId: 4, status: 'resolved', title: '제목', content: '설명', topicId: 2, topicName: mockTopics[2], authorName: '홍길동', createdAt: new Date(qnaNow - 24 * HOUR_MS).toISOString() },
+];
