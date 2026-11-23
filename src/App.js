@@ -4,7 +4,6 @@ import styles from './App.module.css';
 import Layout from "./components/Layout";
 import Login from './pages/Login';
 import Join from './pages/Signup';
-import Invite from './pages/Invite';
 import HandoverList from './pages/HandoverList';
 import HandoverCreate from './pages/HandoverCreate';
 import TaskCreate from './pages/TaskCreate';
@@ -27,7 +26,6 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/join" element={<Join />} />
-          <Route path="/invite" element={<Invite />} />
           <Route path="/loading" element={<Loading />} />
           
           {/* 기존 메인 레이아웃 및 하위 페이지 구조 */}
