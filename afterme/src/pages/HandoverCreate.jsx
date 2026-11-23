@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './HandoverCreate.module.css';
 import extra from './HandoverCreate.module.css';
 
@@ -16,6 +16,13 @@ const TOC = ['업무 개요', '파일 첨부', 'AI 답변 입력', '마감 설�
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'xlsx'];
 const MAX_FOLLOW_UP = 2; // 같은 주제의 추가 질문 최대 횟수
+
+// ⚠️ 시안 문구는 완성도 70% / 퀴즈 80%, 기능명세서는 완성도 80% / 퀴즈 70% 로 서로 달라요.
+// 확정되면 이 두 값만 바꾸면 돼요.
+const MIN_COMPLETION = 70;
+const MIN_QUIZ_CUTOFF = 80;
+const YEAR_COUNT = 5; // 올해부터 5년 (시안: 2026 ~ 2030)
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const LINK_FIELDS = [
   { key: 'notion', label: '노션' },
@@ -37,6 +44,16 @@ const API_ERROR_MESSAGE = {
   404: '조직 정보를 찾을 수 없어요.',
 };
 
+const INITIAL_CLOSING = {
+  year: '',
+  month: '',
+  day: '',
+  successors: [{ email: '', name: '' }],
+  completion: MIN_COMPLETION,
+  quizCutoff: MIN_QUIZ_CUTOFF,
+  inviteCode: '',
+};
+
 /* ---------- 날짜 유틸 (Asia/Seoul 기준) ---------- */
 const seoulToday = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()); // YYYY-MM-DD
@@ -46,6 +63,16 @@ const addDays = (ymd, days) => {
   const dt = new Date(Date.UTC(y, m - 1, d + days));
   return dt.toISOString().slice(0, 10);
 };
+
+const pad = (n) => String(n).padStart(2, '0');
+const daysInMonth = (y, m) => new Date(Date.UTC(Number(y) || 2024, Number(m) || 1, 0)).getUTCDate();
+const diffDays = (fromYmd, toYmd) => {
+  const [fy, fm, fd] = fromYmd.split('-').map(Number);
+  const [ty, tm, td] = toYmd.split('-').map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+};
+/** YYYY-MM-DD, 하나라도 비어 있으면 '' */
+const toDeadline = ({ year, month, day }) => (year && month && day ? `${year}-${month}-${day}` : '');
 
 const fileExt = (name) => name.split('.').pop().toLowerCase();
 const fileSizeLabel = (b) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(b / 1024)}KB`);
@@ -66,7 +93,7 @@ async function requestFollowUp(/* question, answer */) {
 /* ---------- 작은 재사용 컴포넌트 ---------- */
 
 /** 값이 여러 개 늘어날 수 있는 입력 목록 (추가 버튼 포함) */
-function MultiInput({ values, onChange, placeholder, small = false, multiline = false }) {
+function MultiInput({ values, onChange, placeholder, small = false, multiline = false, hideAdd = false }) {
   const setAt = (i, v) => onChange(values.map((x, idx) => (idx === i ? v : x)));
   const add = () => onChange([...values, '']);
   const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
@@ -89,11 +116,13 @@ function MultiInput({ values, onChange, placeholder, small = false, multiline = 
           )}
         </div>
       ))}
-      <div className={styles.addRow}>
-        <button type="button" className={`${styles.addBtn} ${small ? styles.addBtnSmall : ''}`} onClick={add}>
-          추가
-        </button>
-      </div>
+      {!hideAdd && (
+        <div className={styles.addRow}>
+          <button type="button" className={`${styles.addBtn} ${small ? styles.addBtnSmall : ''}`} onClick={add}>
+            추가
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -175,13 +204,32 @@ function Question({ title, hint, children }) {
   );
 }
 
-function SectionHead({ number, title, desc }) {
+function SectionHead({ number, title, desc, meta }) {
   return (
     <div className={styles.sectionHead}>
       <h2 className={styles.sectionTitle}>
         <span>{number}.</span> {title}
       </h2>
-      <p className={styles.sectionDesc}>{desc}</p>
+      <p className={styles.sectionDesc}>
+        <span className={extra.descText}>{desc}</span>
+        {meta && <span className={extra.descMeta}>{meta}</span>}
+      </p>
+    </div>
+  );
+}
+
+function AiError({ onRetry }) {
+  return (
+    <div className={extra.aiError} role="alert">
+      <span className={extra.aiErrorMsg}>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3L1.5 21h21L12 3z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M12 10v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="12" cy="18" r="1.2" fill="currentColor" />
+        </svg>
+        AI 분석에 실패했어요. 작성한 답변은 그대로 저장되어 있어요.
+      </span>
+      <button type="button" className={extra.retryBtn} onClick={onRetry}>다시 시도</button>
     </div>
   );
 }
@@ -204,6 +252,78 @@ function Footer({ onPrev, onNext, nextLabel = '다음', nextEnabled = true, warn
           {loading ? '생성 중...' : nextLabel}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ---------- 4단계 전용: 날짜 드롭다운 / 슬라이더 ---------- */
+function DateSelect({ value, onChange, options, placeholder, label, listMax }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={ref} className={styles.dlDateSelect} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
+      <button
+        type="button"
+        className={`${styles.dlTrigger} ${open ? styles.dlTriggerOpen : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={value ? styles.dlTriggerValue : styles.dlTriggerPlaceholder}>{value || placeholder}</span>
+        <svg className={styles.dlCaret} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+          <path d="M2 4.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <ul
+          className={styles.dlList}
+          role="listbox"
+          aria-label={label}
+          style={listMax ? { maxHeight: listMax * 40 } : undefined}
+        >
+          {options.map((o) => (
+            <li key={o} role="option" aria-selected={o === value}>
+              <button
+                type="button"
+                className={`${styles.dlOption} ${o === value ? styles.dlOptionOn : ''}`}
+                onClick={() => { onChange(o); setOpen(false); }}
+              >
+                {o}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function GaugeSlider({ value, min, onChange, label }) {
+  const pct = ((value - min) / (100 - min)) * 100;
+  return (
+    <div className={styles.dlSliderRow}>
+      <input
+        type="range"
+        className={styles.dlRange}
+        min={min}
+        max={100}
+        step={5}
+        value={value}
+        aria-label={label}
+        style={{ '--pct': `${pct}%` }}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <span className={styles.dlPctBadge}>{value}%</span>
     </div>
   );
 }
@@ -231,10 +351,11 @@ const hasText = (arr) => arr.some((v) => v.trim());
  * props
  * - organizationId : 현재 조직 ID (필수)
  * - accessToken    : Bearer 토큰 (필수)
- * - members        : 조직의 활성 구성원 [{ id, name }] → 전임자 선택용
+ * - currentMemberId : 로그인한 구성원 ID (전임자로 자동 지정)
+ * - requestInviteCode : async () => string  (초대 코드 생성 API)
  * - onCreated(project) : 생성 성공(201) 후 호출. data = Project
  */
-export default function HandoverCreate({ organizationId, accessToken, members = [], onCreated }) {
+export default function HandoverCreate({ organizationId, accessToken, currentMemberId, requestInviteCode, onCreated }) {
   const [step, setStep] = useState(0); // 0~3
   const [showWarning, setShowWarning] = useState(false);
 
@@ -274,10 +395,14 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
   /* 4. 마감 설정 */
   const today = seoulToday();
   const maxDeadline = addDays(today, 31);
-  const [deadline, setDeadline] = useState('');
-  const [predecessorIds, setPredecessorIds] = useState([]);
+  const [closing, setClosing] = useState(INITIAL_CLOSING);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  const deadline = toDeadline(closing);
+  const setClose = (patch) => setClosing((c) => ({ ...c, ...patch }));
 
   const toggleKeyword = (k) =>
     setKeywords((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
@@ -289,9 +414,45 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
   );
   const step2Valid = checks.every(Boolean);
   const answeredCount = questions.filter((q) => hasText(answers[q.id] ?? [''])).length;
+  const baseQuestions = questions.filter((q) => !q.followUpOf);
+  const answeredBase = baseQuestions.filter((q) => hasText(answers[q.id] ?? [''])).length;
   const step3Valid = questions.length > 0 && answeredCount === questions.length;
-  const deadlineValid = !!deadline && deadline >= today && deadline <= maxDeadline;
-  const step4Valid = deadlineValid && predecessorIds.length > 0;
+  const deadlineOutOfRange = !!deadline && (deadline < today || deadline > maxDeadline);
+  const emailsValid = closing.successors.every((r) => !r.email.trim() || EMAIL_RE.test(r.email.trim()));
+  const step4Valid = !!deadline && !deadlineOutOfRange && emailsValid;
+
+  /* 4단계 파생 값 */
+  const thisYear = Number(today.slice(0, 4));
+  const yearOptions = Array.from({ length: YEAR_COUNT }, (_, i) => String(thisYear + i));
+  const monthOptions = Array.from({ length: 12 }, (_, i) => pad(i + 1));
+  const dayOptions = Array.from({ length: daysInMonth(closing.year, closing.month) }, (_, i) => pad(i + 1));
+  const left = deadline ? diffDays(today, deadline) : null;
+  const dLabel = left === null ? '' : left > 0 ? `D-${left}` : left === 0 ? 'D-DAY' : `D+${-left}`;
+
+  const changeYear = (y) => {
+    const max = daysInMonth(y, closing.month);
+    setClose({ year: y, day: closing.day && Number(closing.day) > max ? '' : closing.day });
+  };
+  const changeMonth = (m) => {
+    const max = daysInMonth(closing.year, m);
+    setClose({ month: m, day: closing.day && Number(closing.day) > max ? '' : closing.day });
+  };
+  const setSuccessor = (i, patch) =>
+    setClose({ successors: closing.successors.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) });
+
+  const generateCode = async () => {
+    if (codeLoading) return;
+    setCodeLoading(true);
+    setCodeError('');
+    try {
+      const code = await requestInviteCode?.();
+      setClose({ inviteCode: code ?? '' });
+    } catch {
+      setCodeError('초대 코드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setCodeLoading(false);
+    }
+  };
 
   /* ---------- 파일 처리 ---------- */
   const addFiles = (list) => {
@@ -356,6 +517,10 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
   /* ---------- 최종 제출: POST /api/handovers ---------- */
   const handleSubmit = async () => {
     if (!step4Valid || submitting) return;
+    if (!currentMemberId) {
+      setSubmitError('전임자 정보를 확인할 수 없어요. 다시 로그인해 주세요.');
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
 
@@ -364,7 +529,9 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
       title: taskNames.map((v) => v.trim()).filter(Boolean).join(', '),
       roleName: `${org} ${role}`.trim(),
       deadline, // YYYY-MM-DD
-      predecessorMemberIds: [...new Set(predecessorIds)], // 중복 제거
+      predecessorMemberIds: [currentMemberId], // 전임자 1명 이상 필수 (조직 활성 구성원)
+      // 후임자 이름/이메일/역할, 초대 코드, 완성도/퀴즈 커트라인은
+      // POST /api/handovers 명세에 없음 → 후속 API(#14 등)로 별도 전송
     };
 
     try {
@@ -622,51 +789,51 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
           {step === 2 && (
             <>
               <section className={styles.section}>
-                <SectionHead number={3} title="AI 답변 입력" desc="업무에 필수적인 파일을 첨부해 주세요." />
-                <p className={extra.meta}>
-                  첨부 파일 : 총 ({files.length})건 · 답변 {answeredCount}/{questions.length}
-                </p>
+                <SectionHead
+                  number={3}
+                  title="AI 답변 입력"
+                  desc="업무에 필수적인 파일을 첨부해 주세요."
+                  meta={`첨부 파일 : 총 (${files.length})건 · 답변 ${answeredBase}/${baseQuestions.length}`}
+                />
 
-                <div className={styles.fields}>
-                  <p className={styles.label}>파일 분석에 대한 아래 질문에 답변해주세요.</p>
+                <div className={`${styles.fields} ${extra.fieldsWide}`}>
+                  <p className={extra.lead}>파일 분석에 대한 아래 질문에 답변해주세요.</p>
 
-                  {aiLoading && <p className={extra.meta}>파일을 분석해 질문을 만들고 있어요...</p>}
+                  {aiLoading && <p className={styles.hint}>파일을 분석해 질문을 만들고 있어요...</p>}
                   {aiError._load && (
-                    <div className={extra.aiError} role="alert">
-                      <span>AI 분석에 실패했어요. 작성한 답변은 그대로 저장되어 있어요.</span>
-                      <button type="button" className={extra.retryBtn} onClick={() => { setAiError({}); goStep2Next(); }}>
-                        다시 시도
-                      </button>
-                    </div>
+                    <AiError onRetry={() => { setAiError({}); goStep2Next(); }} />
                   )}
 
-                  {questions.map((q, idx) => {
-                    const number = questions.slice(0, idx + 1).filter((x) => !x.followUpOf).length;
+                  {questions.map((q) => {
                     const isFollow = !!q.followUpOf;
+                    const parentId = q.followUpOf ?? q.id;
+                    const number = baseQuestions.findIndex((x) => x.id === parentId) + 1;
+                    const showText = q.text && q.text !== `질문 ${number}`;
+
                     return (
                       <div key={q.id} className={styles.field}>
-                        {isFollow && <span className={extra.badge}>AI 추가 질문 {q.followUpIndex}/{MAX_FOLLOW_UP}</span>}
-                        <label className={styles.label}>Q. {isFollow ? q.text : `질문 ${number}`}</label>
-                        {isFollow ? null : q.text && q.text !== `질문 ${number}` && <p className={styles.hint}>{q.text}</p>}
+                        {isFollow && (
+                          <span className={extra.badge}>AI 추가 질문 {q.followUpIndex}/{MAX_FOLLOW_UP}</span>
+                        )}
+                        <label className={extra.qLabel}>Q. 질문 {number}</label>
+                        {showText && <p className={styles.hint}>{q.text}</p>}
+
                         <div onBlur={() => !isFollow && analyzeAnswer(q)}>
                           <MultiInput
                             multiline
+                            hideAdd={isFollow}
                             values={answers[q.id] ?? ['']}
                             placeholder="입력해 주세요."
                             onChange={(v) => setAnswers((a) => ({ ...a, [q.id]: v }))}
                           />
                         </div>
-                        {isFollow && q.followUpIndex === MAX_FOLLOW_UP && (
-                          <p className={styles.hint}>같은 주제의 추가 질문은 최대 {MAX_FOLLOW_UP}회까지 제공돼요.</p>
+
+                        {isFollow && (
+                          <p className={extra.limitHint}>
+                            같은 주제의 추가 질문은 최대 {MAX_FOLLOW_UP}회까지 제공돼요.
+                          </p>
                         )}
-                        {aiError[q.id] && (
-                          <div className={extra.aiError} role="alert">
-                            <span>AI 분석에 실패했어요. 작성한 답변은 그대로 저장되어 있어요.</span>
-                            <button type="button" className={extra.retryBtn} onClick={() => analyzeAnswer(q)}>
-                              다시 시도
-                            </button>
-                          </div>
-                        )}
+                        {aiError[q.id] && <AiError onRetry={() => analyzeAnswer(q)} />}
                       </div>
                     );
                   })}
@@ -681,59 +848,126 @@ export default function HandoverCreate({ organizationId, accessToken, members = 
           {step === 3 && (
             <>
               <section className={styles.section}>
-                <SectionHead number={4} title="마감 설정" desc="인수인계 마감일과 전임자를 지정해 주세요." />
+                <SectionHead
+                  number={4}
+                  title="마감 설정"
+                  desc="최종 검수 마감일과 후임자 전달 일정을 지정해 차질 없이 업무를 넘겨주세요."
+                />
 
-                <div className={styles.fields}>
-                  <div className={styles.field}>
-                    <label className={styles.label} htmlFor="deadline">마감일</label>
-                    <input
-                      id="deadline"
-                      type="date"
-                      className={`${styles.input} ${extra.dateInput}`}
-                      value={deadline}
-                      min={today}
-                      max={maxDeadline}
-                      onChange={(e) => setDeadline(e.target.value)}
+                <div className={styles.dlWrap}>
+                  {/* 마감일 */}
+                  <div className={styles.dlBlock}>
+                    <p className={styles.dlLabel}>인수인계 마감일을 지정해 주세요.</p>
+                    <div className={styles.dlDateRow}>
+                      <DateSelect label="년" value={closing.year} onChange={changeYear} options={yearOptions} placeholder="0000" listMax={5} />
+                      <span className={styles.dlUnit}>년</span>
+                      <DateSelect label="월" value={closing.month} onChange={changeMonth} options={monthOptions} placeholder="00" />
+                      <span className={styles.dlUnit}>월</span>
+                      <DateSelect label="일" value={closing.day} onChange={(d) => setClose({ day: d })} options={dayOptions} placeholder="00" listMax={5} />
+                      <span className={styles.dlUnit}>일</span>
+                      {dLabel && <strong className={styles.dlDday}>{dLabel}</strong>}
+                    </div>
+                    <p className={styles.dlHint}>오늘 이후 최대 31일까지 설정할 수 있어요. 이후 연장이 필요하면 관리자(회장)에게 요청하세요.</p>
+                    {deadlineOutOfRange && (
+                      <p className={styles.dlWarning} role="alert">선택할 수 없는 날짜예요. 오늘부터 31일 후({maxDeadline})까지 선택해 주세요.</p>
+                    )}
+                  </div>
+
+                  {/* 후임자 이메일 */}
+                  <div className={styles.dlBlock}>
+                    <p className={styles.dlLabel}>
+                      인수인계서 공유를 위해 후임자의 이메일을 입력해 주세요. <span className={styles.dlOptional}>(선택)</span>
+                    </p>
+                    <div className={styles.dlSuccessors}>
+                      {closing.successors.map((r, i) => {
+                        const bad = r.email.trim() && !EMAIL_RE.test(r.email.trim());
+                        return (
+                          <div key={i} className={styles.dlSuccessorRow}>
+                            <input
+                              type="email"
+                              className={`${styles.dlEmailInput} ${bad ? styles.dlInvalid : ''}`}
+                              value={r.email}
+                              placeholder="example@gmail.com"
+                              aria-label="후임자 이메일"
+                              aria-invalid={!!bad}
+                              onChange={(e) => setSuccessor(i, { email: e.target.value })}
+                            />
+                            <input
+                              type="text"
+                              className={styles.dlNameInput}
+                              value={r.name}
+                              placeholder="이름"
+                              aria-label="후임자 이름"
+                              onChange={(e) => setSuccessor(i, { name: e.target.value })}
+                            />
+                            {closing.successors.length > 1 && (
+                              <button
+                                type="button"
+                                className={styles.dlRowRemove}
+                                aria-label="후임자 삭제"
+                                onClick={() => setClose({ successors: closing.successors.filter((_, idx) => idx !== i) })}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        className={styles.dlAddBox}
+                        aria-label="후임자 추가"
+                        onClick={() => setClose({ successors: [...closing.successors, { email: '', name: '' }] })}
+                      >
+                        +
+                      </button>
+                    </div>
+                    {!emailsValid && <p className={styles.dlWarning} role="alert">이메일 형식을 확인해 주세요.</p>}
+                  </div>
+
+                  {/* 완성도 */}
+                  <div className={styles.dlBlock}>
+                    <p className={styles.dlLabel}>해당 인수인계의 최소 완성도 게이지를 설정해 주세요.</p>
+                    <GaugeSlider
+                      label="최소 완성도"
+                      min={MIN_COMPLETION}
+                      value={closing.completion}
+                      onChange={(v) => setClose({ completion: v })}
                     />
-                    <p className={styles.hint}>오늘부터 31일 후({maxDeadline})까지 선택할 수 있어요. (한국 시간 기준)</p>
-                    {deadline && !deadlineValid && (
-                      <p className={extra.warning} role="alert">선택할 수 없는 날짜예요. 허용 기간 안에서 선택해 주세요.</p>
-                    )}
+                    <p className={styles.dlHint}>
+                      완성도 = 항목 충족률 + 예외 상황 포함 + 질문 해결률 + 퀴즈 결과 (서버 자동 산출), 최소 {MIN_COMPLETION}%
+                    </p>
                   </div>
 
-                  <div className={styles.field}>
-                    <span className={styles.label}>전임자 선택</span>
-                    <p className={styles.hint}>한 명 이상 선택해 주세요. 후임자는 다음 단계에서 등록해요.</p>
-                    {members.length === 0 ? (
-                      <p className={styles.hint}>선택할 수 있는 조직 구성원이 없어요.</p>
-                    ) : (
-                      <ul className={extra.checklist}>
-                        {members.map((m) => (
-                          <li key={m.id}>
-                            <label className={extra.checkItem}>
-                              <input
-                                type="checkbox"
-                                checked={predecessorIds.includes(m.id)}
-                                onChange={() =>
-                                  setPredecessorIds((prev) =>
-                                    prev.includes(m.id) ? prev.filter((x) => x !== m.id) : [...prev, m.id]
-                                  )
-                                }
-                              />
-                              <span>{m.name}</span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  {/* 퀴즈 커트라인 */}
+                  <div className={styles.dlBlock}>
+                    <p className={styles.dlLabel}>해당 인수인계의 퀴즈 정답률 커트라인을 설정해 주세요.</p>
+                    <GaugeSlider
+                      label="퀴즈 정답률 커트라인"
+                      min={MIN_QUIZ_CUTOFF}
+                      value={closing.quizCutoff}
+                      onChange={(v) => setClose({ quizCutoff: v })}
+                    />
+                    <p className={styles.dlHint}>
+                      미달 시 3일 후 재응시할 수 있어요.(10문항 기준 {Math.ceil(closing.quizCutoff / 10)}문항 이상 정답, 최소 {MIN_QUIZ_CUTOFF}%)
+                    </p>
                   </div>
+
+                  {/* 초대 코드 */}
+                  <div className={styles.dlInviteRow}>
+                    <div className={styles.dlCodeBox} aria-live="polite">{closing.inviteCode}</div>
+                    <button type="button" className={styles.dlCodeBtn} onClick={generateCode} disabled={codeLoading}>
+                      {codeLoading ? '생성 중...' : '초대 코드 생성'}
+                    </button>
+                  </div>
+                  {codeError && <p className={styles.dlWarning} role="alert">{codeError}</p>}
                 </div>
               </section>
 
               <Footer
                 onPrev={() => setStep(2)}
                 onNext={handleSubmit}
-                nextLabel="인수인계서 생성"
+                nextLabel="생성하기"
                 nextEnabled={step4Valid}
                 loading={submitting}
                 warning={submitError}

@@ -131,6 +131,9 @@
   margin-right: 2px;
 }
 .sectionDesc {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
   margin: 2px 0 0;
   font-size: 11px;
   color: var(--gray-6);
@@ -449,13 +452,10 @@
   padding: 10px 12px;
   resize: vertical;
   font: inherit;
+  resize: none; 
 }
 
-.meta {
-  margin: 8px 0 0;
-  color: var(--gray-3);
-  font-size: 12px;
-}
+
 
 /* 파일 첨부 */
 .dropzone {
@@ -544,16 +544,33 @@
 }
 
 /* AI 답변 */
+
+.descText { font-size: 12px; color: var(--gray-6); }
+.descMeta { font-size: 12px; color: var(--gray-3); }
+
+.fieldsWide { max-width: none; margin-top: 24px; gap: 24px; }
+.lead { margin: 0; font-size: 16px; font-weight: 500; }
+.qLabel { font-size: 15px; font-weight: 400; }
+.limitHint { margin: 0; font-size: 11px; color: var(--gray-3); }
+
+.textarea {
+  height: 60px;
+  min-height: 60px;
+  padding: 10px 12px;
+  resize: vertical;
+  font: inherit;
+  font-size: 14px;
+}
+
 .badge {
-  display: inline-block;
-  margin-bottom: 6px;
-  padding: 2px 10px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 2px;
+  padding: 3px 12px;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--pink-6),
-    var(--pink-4)
-  );
+  background: linear-gradient(95.75deg, #1371F7 49.92%, #9AC2FC 100.11%);
+  box-shadow: 0 4px 10px rgba(19, 113, 247, 0.25);
   color: #fff;
   font-size: 11px;
 }
@@ -563,26 +580,316 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 8px;
-  padding: 10px 14px;
+  padding: 7px 12px;
   border: 1px solid var(--gray-1);
-  border-radius: 8px;
-  background: var(--gray-1);
+  border-radius: 4px;
+  background: #f7f7f8;
   color: var(--gray-6);
-  font-size: 12px;
+  font-size: 11px;
 }
+.aiErrorMsg { display: inline-flex; align-items: center; gap: 8px; }
 
 .retryBtn {
-  padding: 4px 14px;
+  height: 24px;
+  padding: 0 14px;
   border: 1px solid var(--gray-2);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   color: var(--gray-6);
-  font-size: 12px;
-  cursor: pointer;
+  font-size: 11px;
 }
 
 /* 마감 */
 .dateInput {
   max-width: 220px;
+}
+
+/* ===== 4. 마감 설정 */
+.dlWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 640px;
+  margin-top: 24px;
+}
+.dlBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dlLabel {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--gray-6);
+}
+.dlOptional {
+  color: var(--blue-6);
+}
+.dlHint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--gray-3);
+}
+.dlWarning {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pink-6);
+}
+
+/* ---------- 날짜 ---------- */
+.dlDateRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dlUnit {
+  font-size: 13px;
+  color: var(--gray-6);
+}
+.dlDday {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+.dlDateSelect {
+  position: relative;
+  width: 96px;
+}
+.dlTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--blue-1);
+  color: var(--gray-6);
+  font-size: 14px;
+}
+.dlTriggerOpen {
+  border-radius: 10px 10px 0 0;
+}
+.dlTrigger:focus-visible {
+  outline: 2px solid var(--blue-4);
+  outline-offset: 1px;
+}
+.dlTriggerValue {
+  color: var(--gray-6);
+}
+.dlTriggerPlaceholder {
+  color: var(--gray-2);
+}
+.dlCaret {
+  color: var(--blue-6);
+  flex-shrink: 0;
+}
+.dlTriggerOpen .dlCaret {
+  transform: rotate(180deg);
+}
+
+/* 펼침 목록: 트리거 바로 아래에 붙고, 흰 칸마다 연한 파란 밑줄 */
+.dlList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  border: 1px solid var(--gray-2);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: #fff;
+  box-shadow: 0 6px 14px rgba(20, 20, 22, 0.16);
+}
+.dlOption {
+  display: block;
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-bottom: 2px solid var(--blue-2);
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  color: var(--gray-6);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+.dlOption:hover,
+.dlOptionOn {
+  background: var(--blue-1);
+  color: var(--blue-6);
+}
+
+/* ---------- 후임자 ---------- */
+.dlSuccessors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dlSuccessorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dlEmailInput,
+.dlNameInput {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--gray-6);
+  outline: none;
+}
+.dlEmailInput {
+  width: 235px;
+  height: 30px;
+  border: 1px solid var(--blue-2);
+  background: var(--blue-1);
+}
+.dlNameInput {
+  width: 235px;
+  border: 1px solid var(--gray-1);
+  background: #fff;
+}
+.dlEmailInput::placeholder,
+.dlNameInput::placeholder {
+  color: var(--gray-2);
+}
+.dlEmailInput:focus,
+.dlNameInput:focus {
+  border-color: var(--blue-4);
+  box-shadow: 0 0 0 3px var(--blue-1);
+}
+.dlInvalid {
+  border-color: var(--pink-6);
+}
+.dlRowRemove {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gray-2);
+  font-size: 16px;
+  line-height: 1;
+}
+.dlRowRemove:hover {
+  background: var(--gray-1);
+  color: var(--gray-4);
+}
+.dlAddBox {
+  width: 235px;
+  height: 32px;
+  border: 1px solid var(--blue-2);
+  border-radius: 4px;
+  background: var(--blue-1);
+  color: var(--gray-6);
+  font-size: 18px;
+  text-align: left;
+  padding-left: 14px;
+}
+.dlAddBox:hover {
+  border-color: var(--blue-4);
+  color: var(--blue-6);
+}
+
+/* ---------- 슬라이더 ---------- */
+.dlSliderRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dlRange {
+  --pct: 0%;
+  flex: 1;
+  height: 8px;
+  margin: 0;
+  border-radius: 999px;
+  background:
+    linear-gradient(95.75deg, #1371F7 49.92%, #9AC2FC 100.11%) 0 / var(--pct) 100% no-repeat,
+    var(--blue-1);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.dlRange::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--blue-6);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(19, 113, 247, 0.35);
+}
+.dlRange::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--blue-6);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(19, 113, 247, 0.35);
+}
+.dlRange::-moz-range-track {
+  background: transparent;
+}
+.dlRange:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--blue-2);
+}
+.dlPctBadge {
+  min-width: 44px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--blue-2);
+  box-shadow: 0 3px 6px rgba(19, 113, 247, 0.2);
+  color: var(--gray-6);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ---------- 초대 코드 ---------- */
+.dlInviteRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+.dlCodeBox {
+  display: flex;
+  align-items: center;
+  width: 235px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: var(--blue-1);
+  color: var(--gray-6);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.dlCodeBtn {
+  height: 34px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 8px;
+  background: var(--gray-2);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+.dlCodeBtn:hover:not(:disabled) {
+  background: var(--gray-3);
+}
+.dlCodeBtn:disabled {
+  cursor: wait;
 }
