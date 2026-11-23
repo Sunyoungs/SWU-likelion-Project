@@ -19,6 +19,7 @@ import Loading from './pages/Loading';
 import Notifications from './pages/Notifications';
 import QnACreate from './pages/QnACreate';
 import QnADetail from './pages/QnADetail';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -51,6 +52,9 @@ function App() {
               <Route path="quizzes/:quizSetId/attempts/:attemptId/explanations" element={<QuizExplanation />} /> {/* 해설도 API 명세서에 없어서 임의로 작성 */}
             </Route>
           </Route>
+
+          {/* 정의되지 않은 모든 경로 → 404 안내 화면 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </BrowserRouter>
