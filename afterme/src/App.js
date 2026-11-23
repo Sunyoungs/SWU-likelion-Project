@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import styles from './App.module.css';
 
 import Layout from "./components/Layout";
@@ -36,6 +36,8 @@ function App() {
             <Route path="mypage" element={<Mypage />} />
             <Route path="handovers/create" element={<HandoverCreate />} />
             <Route path="handovers/:projectId">
+              {/* /handovers/:projectId 만 입력하면 인수인계서 열람 화면으로 이동 */}
+              <Route index element={<Navigate to="documents" replace />} />
               <Route path="tasks/create" element={<TaskCreate />} />
               <Route path="tasks/:taskId/interviews" element={<Interview />} />
               <Route path="documents" element={<DocumentViewer />} />
