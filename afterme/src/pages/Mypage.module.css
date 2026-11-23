@@ -1,0 +1,450 @@
+/*
+ * 피그마 '설정_기본페이지' (530:10319) 본문 영역
+ * 상단 헤더(81px)와 왼쪽 메뉴(210px)는 팀 Layout 컴포넌트가 담당.
+ * 피그마 기준 본문 위치: 헤더 아래 28px, 왼쪽 메뉴 오른쪽 92px
+ * → Layout에 이미 여백이 있다면 아래 .page 의 padding 을 지우세요.
+ */
+.page {
+  width: 100%;
+  max-width: calc(972px + 92px);
+  padding: 28px 0 80px 92px;
+}
+
+/* Headline1 24 B */
+.title {
+  margin: 0 0 28px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 35px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+/* 섹션 사이 gap 24 */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 섹션 제목 ↔ 박스 gap 10 */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionTitle img {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Headline 4 20 Bold */
+.sectionTitle h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 29px;
+  letter-spacing: -0.25px;
+  color: #1f1f1f;
+}
+
+/* 공통 박스: border blue-3, radius 5, padding 20 */
+.box {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--blue-3);
+  border-radius: 5px;
+  background: #fff;
+}
+
+/* ---------- 프로필 정보 ---------- */
+.profileBox {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-right: 34px; /* 20 + 내부 pr 14 */
+}
+
+.profileHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+/* 아바타 120 (테두리 포함 SVG 123 → 바깥 1.5px 넘침) */
+.avatar {
+  display: block;
+  flex-shrink: 0;
+  width: 123px;
+  height: 123px;
+  margin: -1.5px;
+}
+
+/* 이름 + 태그: h 120, pt 20, gap 20 */
+.profileSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 20px;
+}
+
+.profileName {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 35px;
+  letter-spacing: -0.25px;
+  color: #1f1f1f;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.tagItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* tag2: h 23, px 12, radius 8, blue-2 / blue-8 */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 23px;
+  padding: 0 12px;
+  border: 1px solid var(--blue-8);
+  border-radius: 8px;
+  background: var(--blue-2);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--blue-8);
+}
+
+/* Body 16 M */
+.tagValue {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-8);
+}
+
+.profileForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center; /* 피그마: 입력 영역(86px) 세로 중앙에 버튼 */
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+/* 프로필 정보 박스: w 250, gap 15 */
+.field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 250px;
+}
+
+.fieldLabel {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 23px;
+  letter-spacing: -0.25px;
+  color: var(--gray-10);
+}
+
+/* h 48, px 10, blue-1 */
+.fieldInput {
+  width: 100%;
+  height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: var(--blue-1);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: var(--gray-10);
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.15s ease;
+}
+
+.fieldInput:hover:not(:focus):not(:disabled) {
+  box-shadow: 0 0 0 1px var(--blue-3);
+}
+
+.fieldInput:focus {
+  box-shadow: 0 0 0 2px var(--blue-6);
+}
+
+/* 에러: 핑크 테두리 (로그인·회원가입과 동일) */
+.fieldInput[aria-invalid='true'],
+.fieldInput[aria-invalid='true']:hover {
+  box-shadow: 0 0 0 1px var(--pink-6);
+}
+
+.fieldInput[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 2px var(--pink-6);
+}
+
+/* 에러 메시지: 박스 아래 여백(20px) 안에 띄워서 레이아웃이 밀리지 않게 */
+.fieldError {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 14px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--pink-6);
+}
+
+.fieldInput:disabled {
+  opacity: 0.6;
+}
+
+.saveArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.saveMessage {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: -0.25px;
+  color: var(--blue-6);
+}
+
+/* 저장 버튼 – 활성 (피그마 Button state=activate, 539:10959) */
+.saveButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 130px;
+  height: 41px;
+  padding: 0 40px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(107.7deg, var(--blue-6) 49.92%, var(--blue-3) 100.11%);
+  box-shadow: 4px 4px 10px 0 rgba(124, 124, 125, 0.15);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: #fff;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 4px 4px 12px 0 rgba(19, 113, 247, 0.3);
+}
+
+.saveButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.saveButton:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+/* 저장 버튼 – 비활성 (피그마 Button state=Deactivate) */
+.saveButton:disabled {
+  border: 1px solid var(--gray-1);
+  background: var(--gray-1);
+  color: var(--gray-3);
+  cursor: not-allowed;
+}
+
+/* ---------- 알림 설정 / 계정 관리 행 ---------- */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+/* p 10, border-bottom blue-1, radius 5 */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px;
+  border-bottom: 1px solid var(--blue-1);
+  border-radius: 5px;
+}
+
+.rowAccount {
+  border-bottom-color: var(--gray-1);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Body 16 M */
+.rowTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 23px;
+  letter-spacing: -0.25px;
+  color: #1f1f1f;
+}
+
+/* Body 14 M */
+.rowDesc {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.25px;
+  color: #5c5c5c;
+}
+
+/* 계정 관리는 Regular */
+.accountTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 23px;
+  letter-spacing: -0.25px;
+  color: #1f1f1f;
+}
+
+.accountDesc {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+  color: #5c5c5c;
+}
+
+/* 회원 탈퇴: pink-1 배경, pink-6 테두리/글자, px 20 py 10, radius 5 */
+.withdrawButton {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border: 1px solid var(--pink-6);
+  border-radius: 5px;
+  background: var(--pink-1);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 23px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--pink-6);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.withdrawButton:hover {
+  background: var(--pink-6);
+  color: #fff;
+}
+
+.withdrawButton:focus-visible {
+  outline: 2px solid var(--pink-6);
+  outline-offset: 2px;
+}
+
+/* ---------- 토글 (58 x 38, radius 19) ---------- */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggleInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* 꺼짐: 흰 배경 + 파란 동그라미(왼쪽) */
+.toggleTrack {
+  position: relative;
+  display: block;
+  width: 58px;
+  height: 38px;
+  border: 1px solid var(--gray-1);
+  border-radius: 19px;
+  background: #fff;
+  box-shadow: 4px 4px 10px 0 rgba(124, 124, 125, 0.15);
+  transition: background-color 0.2s ease;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 6px;
+  left: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--blue-6);
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
+}
+
+/* 켜짐: 파란 배경 + 흰 동그라미(오른쪽) */
+.toggleInput:checked + .toggleTrack {
+  background: var(--blue-6);
+}
+
+.toggleInput:checked + .toggleTrack .toggleKnob {
+  transform: translateX(22px);
+  background: #fff;
+}
+
+.toggleInput:focus-visible + .toggleTrack {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldInput,
+  .saveButton,
+  .withdrawButton,
+  .toggleTrack,
+  .toggleKnob {
+    transition: none;
+  }
+}
