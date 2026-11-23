@@ -1,0 +1,408 @@
+/*
+ * 피그마 '알림 센터' (530:10226 / 543:10965 / 530:10272) 본문 영역
+ * 상단 헤더(81px)와 왼쪽 메뉴(210px)는 팀 Layout 컴포넌트가 담당.
+ * 피그마 기준 본문 위치: 헤더 아래 38px, 왼쪽 메뉴 오른쪽 90px
+ * → Layout에 이미 여백이 있다면 아래 .page 의 padding 을 지우세요.
+ */
+.page {
+  width: 100%;
+  max-width: calc(967px + 90px);
+  padding: 38px 0 80px 90px;
+}
+
+/* ---------- 제목 + 읽지 않은 알림 (gap 20) ---------- */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 아이콘 30 + Headline1 24 B (gap 8) */
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 30px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+.title img {
+  display: block;
+  flex-shrink: 0;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* h 35, px 12, blue-1 / Detail 16 R blue-6 */
+.unread {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  margin: 0;
+  padding: 0 12px;
+  background: var(--blue-1);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: var(--blue-6);
+}
+
+/* 모두 읽음 처리 (기능 명세 추가 – 피그마 Button 스타일 사용) */
+.markAllButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 35px;
+  padding: 0 16px;
+  border: 1px solid var(--gray-1);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 4px 4px 10px 0 rgba(124, 124, 125, 0.15);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-6);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.markAllButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: linear-gradient(107.7deg, var(--blue-6) 49.92%, var(--blue-3) 100.11%);
+  color: #fff;
+}
+
+.markAllButton:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+/* 비활성 (피그마 Button state=Deactivate) */
+.markAllButton:disabled {
+  background: var(--gray-1);
+  font-weight: 700;
+  color: var(--gray-3);
+  cursor: not-allowed;
+}
+
+/* ---------- 필터 (gap 14) ---------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+/* tag1: h 34, px 16, radius 25 */
+.filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--gray-1);
+  border-radius: 25px;
+  background: #fff;
+  filter: drop-shadow(4px 4px 5px rgba(124, 124, 125, 0.15));
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-3);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.filter:hover:not(.filterActive) {
+  border-color: var(--blue-3);
+  color: var(--blue-6);
+}
+
+.filter:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+.filterActive {
+  border-color: transparent;
+  background: linear-gradient(213.69deg, var(--blue-6) 38.23%, var(--blue-3) 97.02%);
+  color: #fff;
+}
+
+/* ---------- 알림 목록 (필터 아래 25, gap 12) ---------- */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 25px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 카드: p 20, border blue-2, radius 5 (h 90) */
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  padding: 19px 20px;
+  border: 1px solid var(--blue-2);
+  border-radius: 5px;
+  background: #fff;
+  filter: drop-shadow(4px 4px 5px rgba(124, 124, 125, 0.15));
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--blue-3);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+.cardMain {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.typeIcon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 제목 줄 ↔ 메시지 gap 10 */
+.cardText {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 빨간 점 6 + Body 16 M (gap 8) */
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 23px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-10);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pink-6);
+}
+
+/* 배지 ↔ 시간 gap 12 */
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 배지: px 8 py 4, radius 5, 12 R white */
+.badgeUnread,
+.badgeRead {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 14px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.badgeUnread {
+  border: 1px solid var(--pink-4);
+  background: var(--pink-6);
+}
+
+.badgeRead {
+  border: 1px solid var(--blue-4);
+  background: var(--blue-6);
+}
+
+.time {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-10);
+}
+
+/* 12 Light */
+.message {
+  margin: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 16px;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--gray-8);
+}
+
+/* 바로가기 버튼 모양 – 기본 (피그마 Button Default) */
+.action {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 130px;
+  height: 41px;
+  padding: 0 16px;
+  border: 1px solid var(--gray-1);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 4px 4px 10px 0 rgba(124, 124, 125, 0.15);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+  color: var(--gray-6);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* 클릭·호버 시 (피그마 '클릭 후 변경사항' – Button activate) */
+.card:hover .action,
+.card:focus-visible .action,
+.card:active .action {
+  border-color: transparent;
+  background: linear-gradient(107.7deg, var(--blue-6) 49.92%, var(--blue-3) 100.11%);
+  font-weight: 700;
+  color: #fff;
+}
+
+/* 이동할 화면이 없는 알림 (피그마 '초대하기' Deactivate) */
+.cardNoLink .action,
+.cardNoLink:hover .action,
+.cardNoLink:focus-visible .action,
+.cardNoLink:active .action {
+  border-color: var(--gray-1);
+  background: var(--gray-1);
+  font-weight: 700;
+  color: var(--gray-3);
+}
+
+.cardNoLink {
+  cursor: default;
+}
+
+/* ---------- 페이지 번호 (목록 아래 44) ---------- */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 44px;
+}
+
+/* 36 x 36, radius 5 */
+.pageButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--gray-1);
+  border-radius: 5px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: var(--gray-3);
+}
+
+.pageButton:hover:not(.pageButtonActive) {
+  border-color: var(--blue-3);
+  color: var(--blue-6);
+}
+
+.pageButton:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+.pageButtonActive {
+  border-color: var(--blue-6);
+  background: var(--blue-6);
+  color: #fff;
+}
+
+/* ---------- 알림 없음 (피그마 알림 센터_non) ---------- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 132px;
+}
+
+/* 120 x 130, blue-1, radius 5 */
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 130px;
+  border-radius: 5px;
+  background: var(--blue-1);
+}
+
+.emptyIcon img {
+  display: block;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.25px;
+  color: #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markAllButton,
+  .filter,
+  .card,
+  .action {
+    transition: none;
+  }
+}
