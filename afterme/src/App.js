@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import styles from './App.module.css';
 
 import Layout from "./components/Layout";
@@ -19,6 +19,7 @@ import Loading from './pages/Loading';
 import Notifications from './pages/Notifications';
 import QnACreate from './pages/QnACreate';
 import QnADetail from './pages/QnADetail';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -36,6 +37,8 @@ function App() {
             <Route path="mypage" element={<Mypage />} />
             <Route path="handovers/create" element={<HandoverCreate />} />
             <Route path="handovers/:projectId">
+              {/* /handovers/:projectId 만 입력하면 인수인계서 열람 화면으로 이동 */}
+              <Route index element={<Navigate to="documents" replace />} />
               <Route path="tasks/create" element={<TaskCreate />} />
               <Route path="tasks/:taskId/interviews" element={<Interview />} />
               <Route path="documents" element={<DocumentViewer />} />
@@ -49,6 +52,9 @@ function App() {
               <Route path="quizzes/:quizSetId/attempts/:attemptId/explanations" element={<QuizExplanation />} /> {/* 해설도 API 명세서에 없어서 임의로 작성 */}
             </Route>
           </Route>
+
+          {/* 정의되지 않은 모든 경로 → 404 안내 화면 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </BrowserRouter>
