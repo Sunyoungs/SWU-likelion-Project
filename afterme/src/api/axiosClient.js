@@ -8,7 +8,7 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken'); 
+  const token = localStorage.getItem('accessToken');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -21,12 +21,14 @@ axiosClient.interceptors.response.use(
     return response.data?.data || response.data;
   },
   (error) => {
+    if (error.config?.skipErrorAlert) return Promise.reject(error);
+
     const errorData = error.response?.data;
-    
+
     if (errorData) {
       switch (errorData.code) {
         case 'INVALID_INPUT':
-          alert(`입력 오류: ${errorData.message}`); 
+          alert(`입력 오류: ${errorData.message}`);
           break;
         case 'RESOURCE_NOT_FOUND':
           alert('요청하신 데이터를 찾을 수 없습니다.');
@@ -38,7 +40,7 @@ axiosClient.interceptors.response.use(
           console.error('API Error:', errorData.message);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
