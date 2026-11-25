@@ -76,8 +76,9 @@ const Sidebar = () => {
           controlsId="sidebar-handover-menu"
         />
         {isHandoverOpen && (
-          <div id="sidebar-handover-menu" className={styles.subMenu}>
-            <NavLink end to="/handovers" className={({ isActive }) => subItemClass(isActive)}>
+          <div className={styles.subMenu}>
+            <NavLink end to="/handovers" className={({ isActive }) => isActive ? `${styles.subItem} ${styles.activeSub}` : styles.subItem}>
+
               인수인계 목록
             </NavLink>
             <NavLink end to="/handovers/create" className={({ isActive }) => subItemClass(isActive)}>
