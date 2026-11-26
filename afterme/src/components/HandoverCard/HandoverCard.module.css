@@ -1,0 +1,184 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: white;
+  border: 1px solid var(--gray-1);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(19, 113, 247, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topRight {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.kebab {
+  display: flex;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--gray-4);
+}
+.kebab:hover {
+  background-color: var(--gray-1);
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  min-width: 150px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background-color: white;
+  border: 1px solid var(--gray-1);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+.menuItem {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  color: var(--gray-6);
+}
+.menuItem:hover {
+  background-color: var(--blue-1);
+}
+.id {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  color: var(--gray-3);
+}
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.period {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--gray-3);
+}
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-1);
+}
+.personRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--gray-4);
+}
+.personRow dt {
+  color: var(--gray-3);
+}
+.personRow dd {
+  margin: 0;
+  text-align: right;
+}
+.me,
+.me dt {
+  color: var(--blue-8);
+}
+.scoreHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--gray-4);
+}
+.scoreValue {
+  font-size: 14px;
+  font-weight: 700;
+}
+.met {
+  color: var(--green-8);
+}
+.unmet {
+  color: var(--pink-8);
+}
+.bar {
+  position: relative;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background-color: var(--gray-1);
+}
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+.fillUnmet {
+  background: linear-gradient(90deg, var(--pink-6) 0%, var(--pink-3) 100%);
+}
+.fillMet {
+  background: linear-gradient(90deg, var(--green-8) 0%, var(--green-3) 100%);
+}
+.marker {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background-color: var(--gray-4);
+  transform: translateX(-1px);
+}
+.quizRow {
+  margin: 10px 0 0;
+  text-align: right;
+  font-size: 11px;
+  color: var(--gray-3);
+}
+.orange {
+  color: var(--orange-8);
+}
+.green {
+  color: var(--green-8);
+}
+.pink {
+  color: var(--pink-8);
+}
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 22px;
+}
+.actionBtn {
+  padding: 11px 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.staticBtn {
+  cursor: default;
+  pointer-events: none;
+}

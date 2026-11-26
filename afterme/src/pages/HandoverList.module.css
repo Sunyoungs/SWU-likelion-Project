@@ -1,0 +1,187 @@
+.page {
+  position: relative;
+  min-height: calc(100vh - 64px - 64px); /* 헤더 + contentArea 상하 패딩 */
+}
+.inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+.summary {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--gray-3);
+}
+.summary strong {
+  color: var(--blue-6);
+  font-weight: 700;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 24px;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.filterBtn {
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  background: none;
+}
+.filterBtn:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+.filterTag {
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer !important;
+}
+.sortWrap {
+  position: relative;
+}
+.sort {
+  appearance: none;
+  height: 40px;
+  min-width: 140px;
+  padding: 0 40px 0 16px;
+  border: 1px solid var(--gray-1);
+  border-radius: 10px;
+  background-color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-6);
+  cursor: pointer;
+}
+.sort:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+.sortIcon {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: flex;
+  color: var(--gray-3);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.selectionBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--gray-3);
+}
+.selectionBar strong {
+  color: var(--blue-6);
+}
+.smallBtn {
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.listArea {
+  min-height: 420px;
+  margin-top: 16px;
+}
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 100px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--gray-3);
+}
+.message p {
+  margin: 0;
+}
+.footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--blue-2);
+}
+.footerRight {
+  justify-self: end;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 110px;
+  text-align: center;
+}
+.emptyIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 108px;
+  border-radius: 4px;
+  background-color: var(--blue-1);
+  color: var(--blue-3);
+}
+.emptyTitle {
+  margin: 20px 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+.emptyDesc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gray-3);
+}
+.emptyActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+.emptyBtn {
+  padding: 10px 20px;
+  font-size: 13px;
+}
+.inlineInvite {
+  display: flex;
+  justify-content: center;
+  padding-top: 110px;
+}
+.overlay {
+  position: absolute;
+  inset: -32px;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 220px;
+  background-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}

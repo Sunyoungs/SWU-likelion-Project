@@ -1,0 +1,25 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.orange {
+  background-color: var(--orange-1);
+  color: var(--orange-8);
+}
+.pink {
+  background-color: var(--pink-1);
+  color: var(--pink-8);
+}
+.green {
+  background-color: var(--green-1);
+  color: var(--green-8);
+}
+.gray {
+  background-color: var(--gray-1);
+  color: var(--gray-4);
+}

@@ -20,6 +20,8 @@ import Notifications from './pages/Notifications';
 import QnACreate from './pages/QnACreate';
 import QnADetail from './pages/QnADetail';
 import NotFound from './pages/NotFound';
+import DocumentVersions from './pages/DocumentVersions';
+import HandoverStatus from './pages/HandoverStatus';
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
               <Route path="tasks/create" element={<TaskCreate />} />
               <Route path="tasks/:taskId/interviews" element={<Interview />} />
               <Route path="documents" element={<DocumentViewer />} />
+              <Route path="documents/versions" element={<DocumentVersions />} />
+              <Route path="status" element={<HandoverStatus />} />
               <Route path="questions" element={<QnA />} />
               <Route path="questions/create" element={<QnACreate />} /> {/* 퀴즈 생성도 API 명세서에 없어서 임의로 작성 */}
               <Route path="questions/:threadId" element={<QnADetail />} />

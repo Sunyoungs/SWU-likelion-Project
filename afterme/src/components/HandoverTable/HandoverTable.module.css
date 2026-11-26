@@ -1,0 +1,49 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: center;
+}
+.table th {
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-6);
+  background-color: var(--blue-1);
+  border-top: 1px solid var(--blue-2);
+  border-bottom: 1px solid var(--blue-2);
+}
+.table td {
+  height: 74px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--gray-1);
+  font-size: 14px;
+  color: var(--gray-6);
+}
+.row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.row:hover {
+  background-color: #f7faff;
+}
+.titleCell {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.titleCell a:hover {
+  color: var(--blue-6);
+  text-decoration: underline;
+}
+.score {
+  font-size: 13px;
+  font-weight: 700;
+}
+.met {
+  color: var(--green-8);
+}
+.unmet {
+  color: var(--pink-8);
+}

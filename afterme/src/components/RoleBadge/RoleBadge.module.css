@@ -1,0 +1,26 @@
+.role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.md {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.sm {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.filled {
+  background: linear-gradient(90deg, var(--blue-6) 0%, var(--blue-4) 100%);
+  color: white;
+  border: 1px solid transparent;
+}
+.outline {
+  background-color: white;
+  color: var(--blue-6);
+  border: 1px solid var(--blue-6);
+}

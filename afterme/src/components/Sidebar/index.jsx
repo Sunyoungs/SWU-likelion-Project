@@ -91,6 +91,7 @@ const Sidebar = () => {
   const questionsPath = `/handovers/${projectId}/questions`;
   const questionCreatePath = `${questionsPath}/create`;
   const isQuestionCreate = Boolean(matchPath(questionCreatePath, pathname));
+  const isHandoverSubPage = Boolean(matchPath('/handovers/:projectId/documents/*', pathname) || matchPath('/handovers/:projectId/status', pathname));
 
   return (
     <aside className={styles.sidebar}>
@@ -103,13 +104,12 @@ const Sidebar = () => {
           controlsId="sidebar-handover-menu"
         />
         <SubMenu id="sidebar-handover-menu" isOpen={isHandoverOpen}>
-          <NavLink end to="/handovers" className={({ isActive }) => subItemClass(isActive)}>
+          <NavLink end to="/handovers" className={({ isActive }) => subItemClass(isActive || isHandoverSubPage)}>
             인수인계 목록
           </NavLink>
           <NavLink end to="/handovers/create" className={({ isActive }) => subItemClass(isActive)}>
             인수인계 생성
           </NavLink>
-          {/* end 없음: 퀴즈 하위 화면(/quizzes/...)에서도 활성 표시 */}
           <NavLink to={quizzesPath} className={({ isActive }) => subItemClass(isActive)}>
             인수인계 퀴즈
           </NavLink>
