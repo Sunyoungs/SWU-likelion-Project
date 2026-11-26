@@ -63,11 +63,6 @@
 .searchInput::placeholder {
   color: var(--gray-3);
 }
-.searchMessage {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--pink-6);
-}
 .aside {
   grid-column: 1;
   grid-row: 2;
@@ -76,7 +71,6 @@
   top: 16px;
 }
 .versionCard {
-  position: relative;
   padding: 10px 12px;
   border: 1px solid var(--blue-4);
   border-radius: 8px;
@@ -126,47 +120,6 @@
 }
 .prevBtn:hover {
   color: var(--blue-6);
-}
-.versionList {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 5;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
-  background-color: white;
-  border: 1px solid var(--gray-1);
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-.versionItem {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  font-size: 12px;
-  color: var(--gray-6);
-}
-.versionItem:hover {
-  background-color: var(--blue-1);
-}
-.versionCurrent {
-  font-weight: 700;
-  color: var(--blue-6);
-}
-.versionDate {
-  color: var(--gray-3);
-  font-weight: 400;
-}
-.versionEmpty {
-  padding: 6px 8px;
-  font-size: 12px;
-  color: var(--gray-3);
 }
 .tocLabel {
   margin: 18px 0 6px;
@@ -378,16 +331,125 @@
 .footer {
   display: flex;
   justify-content: flex-end;
-  align-items: center;
-  gap: 16px;
   max-width: 660px;
   margin-top: 40px;
 }
-.notice {
-  margin: 0;
-  font-size: 13px;
-  color: var(--blue-8);
-}
 .confirmBtn {
   padding: 10px 28px;
+}
+.results {
+  max-width: 660px;
+}
+.resultsTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+.resultsDesc {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--gray-3);
+}
+.resultFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.resultFilterBtn {
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  background: none;
+}
+.resultFilterBtn:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+.resultFilterTag {
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer !important;
+}
+.searching {
+  padding: 60px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--gray-3);
+}
+.resultList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.resultItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--gray-2);
+  border-radius: 6px;
+  background-color: white;
+}
+.resultBody {
+  flex: 1;
+  min-width: 0;
+}
+.resultLocation {
+  margin: 0;
+  font-size: 11px;
+  color: var(--gray-3);
+}
+.resultText {
+  margin: 6px 0 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--gray-6);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.markStrong {
+  padding: 0 2px;
+  border-radius: 2px;
+  background-color: var(--blue-8);
+  color: white;
+}
+.resultMove {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: var(--gray-4);
+  text-decoration: underline;
+}
+.resultMove:hover {
+  color: var(--blue-6);
+}
+.noResult {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 340px;
+  margin-top: 16px;
+  padding: 24px;
+  border: 1.5px dashed var(--gray-2);
+  border-radius: 6px;
+  text-align: center;
+}
+.noResultTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-6);
+}
+.noResultDesc {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--gray-3);
 }

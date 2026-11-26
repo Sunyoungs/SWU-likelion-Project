@@ -1,30 +1,55 @@
 import axiosClient from './axiosClient';
 import { mockApi } from './handoverMock';
 
+// 백엔드 연결 전에는 true → 목업 데이터로 화면 확인
+// 백엔드 연결 후에는 false 로 바꿔 주세요.
 export const USE_MOCK = true;
 
 const toList = (res) => (Array.isArray(res) ? res : res?.items ?? res?.content ?? []);
 
+const ROLE_PRIORITY = ['PREDECESSOR', 'SUCCESSOR'];
+const pickMyRole = (raw) => {
+  const roles = raw.myRoles ?? (raw.myRole ? [raw.myRole] : []);
+  return ROLE_PRIORITY.find((r) => roles.includes(r)) ?? roles[0];
+};
+
+const findParticipant = (raw, role) => {
+  const p = (raw.participants ?? []).find((x) => x.role === role);
+  if (p) return { name: p.name, assignedRole: p.roleName ?? '' };
+  const legacy = role === 'PREDECESSOR' ? raw.predecessor : raw.successor; // 목업용
+  return legacy ?? { name: '-', assignedRole: '' };
+};
+
+const toScore = (v) => (typeof v === 'number' ? v : v?.score ?? v?.total ?? 0);
+
 export const normalizeHandover = (raw = {}) => ({
-  projectId: raw.projectId ?? raw.id,
-  title: raw.projectName ?? raw.title ?? '',
-  myRole: raw.myRole ?? raw.role,
-  status: raw.status ?? 'IN_PROGRESS',
+  projectId: raw.id ?? raw.projectId,
+  organizationId: raw.organizationId,
+  title: raw.title ?? raw.projectName ?? '',
+  roleName: raw.roleName ?? '',
+  myRole: pickMyRole(raw), // 'PREDECESSOR' | 'SUCCESSOR'
+  myRoles: raw.myRoles ?? (raw.myRole ? [raw.myRole] : []),
+  status: raw.status ?? 'IN_PROGRESS', // 'IN_PROGRESS' | 'COMPLETED' (백엔드 enum 확인 필요)
   startDate: raw.startDate ?? raw.createdAt,
   deadline: raw.deadline,
   createdAt: raw.createdAt,
-  predecessor: raw.predecessor ?? { name: '-', assignedRole: '' },
-  successor: raw.successor ?? { name: '-', assignedRole: '' },
-  completenessScore: raw.completenessScore ?? 0,
-  minCompletenessScore: raw.minCompletenessScore ?? 80,
-  quizStatus: raw.quizStatus ?? 'NOT_TAKEN', 
+  completedAt: raw.completedAt,
+  dDay: raw.dDay,
+  overdue: Boolean(raw.overdue),
+  predecessor: findParticipant(raw, 'PREDECESSOR'),
+  successor: findParticipant(raw, 'SUCCESSOR'),
+  completenessScore: toScore(raw.completeness ?? raw.completenessScore),
+  // ↓ 아래 3개는 현재 명세서 응답에 없음 → 백엔드 추가 전까지 기본값
+  minCompletenessScore: raw.minCompletenessScore ?? raw.completeness?.minScore ?? 80,
+  quizStatus: raw.quizStatus ?? 'NOT_TAKEN', // 'NOT_TAKEN' | 'PASSED' | 'FAILED'
   quizCutline: raw.quizCutline ?? 70,
+  resourceVersion: raw.resourceVersion,
 });
 
 const normalizeVersionMeta = (raw = {}) => ({
   versionId: raw.versionId ?? raw.id,
   versionLabel: raw.versionLabel ?? (raw.versionNumber ? `v${raw.versionNumber}` : 'v1.0'),
-  status: raw.status ?? 'PUBLISHED',
+  status: raw.status ?? 'PUBLISHED', // 'DRAFT' | 'PUBLISHED'
   createdAt: raw.publishedAt ?? raw.createdAt,
 });
 
@@ -52,9 +77,18 @@ export const normalizeVersion = (raw = {}) => ({
   })),
 });
 
-// GET /handovers
-export const fetchHandovers = async () => {
-  const res = USE_MOCK ? await mockApi.getHandovers() : await axiosClient.get('/handovers');
+// GET /handovers?page=0&size=100 (organizationId?, status? 선택)
+export const fetchHandovers = async ({ organizationId, status } = {}) => {
+  const res = USE_MOCK
+    ? await mockApi.getHandovers()
+    : await axiosClient.get('/handovers', {
+        params: {
+          page: 0,
+          size: 100,
+          ...(organizationId && { organizationId }),
+          ...(status && { status }),
+        },
+      });
   return toList(res).map(normalizeHandover);
 };
 
@@ -72,36 +106,27 @@ export const completeHandover = (projectId) =>
     ? mockApi.completeHandover(projectId)
     : axiosClient.post(`/handovers/${projectId}/completion`);
 
-// POST /handover-invitations/verify
-// 요청 body 필드명(invitationCode)은 가정 — 백엔드와 확인 필요
+
+// POST /handovers-invitations/verify  body: { code }
 export const verifyInvitationCode = async (code) => {
   const res = USE_MOCK
     ? await mockApi.verifyInvitation(code)
-    : await axiosClient.post(
-        '/handover-invitations/verify',
-        { invitationCode: code },
-        { skipErrorAlert: true }
-      );
+    : await axiosClient.post('/handovers-invitations/verify', { code }, { skipErrorAlert: true });
   return {
+    organizationId: res?.organizationId,
     organizationName: res?.organizationName ?? '',
     role: res?.role ?? 'SUCCESSOR',
-    teamName: res?.teamName ?? res?.assignedRole ?? '',
-    projectId: res?.projectId,
+    teamName: res?.roleName ?? res?.teamName ?? '', // 명세서에 없음 → 없으면 '역할 : 후임자'만 표시
   };
 };
 
-// POST /handover-invitations/join  (명세서에는 '/joini'로 적혀 있음 — 오타 확인 필요)
+// POST /handovers-invitations/join  body: { code }  응답: { projectId }
 export const joinInvitation = (code) =>
   USE_MOCK
     ? mockApi.joinInvitation(code)
-    : axiosClient.post(
-        '/handover-invitations/join',
-        { invitationCode: code },
-        { skipErrorAlert: true }
-      );
+    : axiosClient.post('/handovers-invitations/join', { code }, { skipErrorAlert: true });
 
 // GET /handovers/{projectId}/documents → GET .../documents/{documentId}/versions/{versionId}
-// versionId 를 넘기지 않으면 문서의 최신 공개 버전을 조회
 export const fetchDocumentView = async (projectId, versionId) => {
   if (USE_MOCK) {
     const res = await mockApi.getDocument(projectId, versionId);
@@ -169,9 +194,131 @@ export const updateDocumentDraft = (projectId, documentId, versionId, body) =>
 
 // GET /handovers/{projectId}/attachments/{attachmentId}/download-url
 export const getAttachmentDownloadUrl = async (projectId, attachmentId) => {
-  if (USE_MOCK) return { url: null };
+  if (USE_MOCK) return { url: null, expiresAt: null };
   const res = await axiosClient.get(
-    `/handovers/${projectId}/attachments/${attachmentId}/download-url`
+    `/handovers/${projectId}/attachments/${attachmentId}/download-url`,
+    { skipErrorAlert: true }
   );
-  return { url: res?.url ?? res?.downloadUrl ?? null };
+  return { url: res?.downloadUrl ?? res?.url ?? null, expiresAt: res?.expiresAt ?? null };
+};
+
+// GET .../documents/{documentId}/versions — 버전 카드용 (작성자 · 설명 포함)
+export const fetchVersionHistory = async (projectId, documentId) => {
+  const res = USE_MOCK
+    ? await mockApi.getVersions()
+    : await axiosClient.get(`/handovers/${projectId}/documents/${documentId}/versions`);
+  return toList(res).map(normalizeVersion);
+};
+
+// GET .../documents/{documentId}/versions/{versionId} — 변경 사항 비교용 상세
+export const fetchVersionDetail = async (projectId, documentId, versionId) => {
+  if (USE_MOCK) {
+    const res = await mockApi.getDocument(projectId, versionId);
+    return normalizeVersion(res.version);
+  }
+  const res = await axiosClient.get(
+    `/handovers/${projectId}/documents/${documentId}/versions/${versionId}`
+  );
+  return normalizeVersion(res);
+};
+
+export const normalizeQuestion = (raw = {}) => ({
+  threadId: raw.threadId ?? raw.id,
+  title: raw.title ?? '',
+  content: raw.content ?? raw.body ?? '',
+  answer: raw.answer?.content ?? raw.answer ?? raw.replies?.[0]?.content ?? '',
+  status: raw.status,
+});
+
+// GET /handovers/{projectId}/questions
+export const fetchQuestions = async (projectId) => {
+  const res = USE_MOCK
+    ? await mockApi.getQuestions()
+    : await axiosClient.get(`/handovers/${projectId}/questions`);
+  return toList(res).map(normalizeQuestion);
+};
+
+// (검색 API 명세가 확정되면 GET /handovers/{projectId}/document-sections/search 로 교체)
+export const searchDocument = async ({ projectId, keyword, sections = [] }) => {
+  const q = keyword.toLowerCase();
+  const results = [];
+
+  sections.forEach((section, index) => {
+    const location = `${index + 1}. ${section.title}`;
+    section.fields.forEach((field) =>
+      field.values.forEach((value) =>
+        String(value)
+          .split('\n')
+          .forEach((line) => {
+            if (line.toLowerCase().includes(q)) {
+              results.push({ id: `b-${results.length}`, type: 'BODY', sectionKey: section.key, location, text: line });
+            }
+          })
+      )
+    );
+    section.attachments.forEach((file) => {
+      if (file.fileName.toLowerCase().includes(q)) {
+        results.push({
+          id: `f-${results.length}`,
+          type: 'FILE',
+          sectionKey: section.key,
+          location: `${location} · ${file.fileName}`,
+          text: file.fileName,
+        });
+      }
+    });
+  });
+
+  let questionList = [];
+  try {
+    questionList = await fetchQuestions(projectId);
+  } catch {
+    questionList = [];
+  }
+  questionList.forEach((qa) => {
+    const text = [qa.title, qa.content, qa.answer].find((t) => t && t.toLowerCase().includes(q));
+    if (text) {
+      results.push({
+        id: `q-${qa.threadId}`,
+        type: 'QNA',
+        sectionKey: null,
+        location: `Q&A · ${qa.title}`,
+        text,
+        threadId: qa.threadId,
+      });
+    }
+  });
+  return results;
+};
+
+// GET /handovers/{projectId}/completeness + GET /handovers/{projectId}/completion
+export const fetchHandoverStatus = async (projectId) => {
+  const [completeness, completion] = USE_MOCK
+    ? await Promise.all([mockApi.getCompleteness(projectId), mockApi.getCompletion(projectId)])
+    : await Promise.all([
+        axiosClient.get(`/handovers/${projectId}/completeness`),
+        axiosClient.get(`/handovers/${projectId}/completion`),
+      ]);
+
+  return {
+    score: completeness?.score ?? completeness?.completenessScore ?? 0,
+    targetScore: completeness?.targetScore ?? completeness?.minCompletenessScore ?? 80,
+    missingItems: (completeness?.missingItems ?? completeness?.items ?? []).map((m, i) => ({
+      id: m.id ?? i,
+      target: m.target ?? m.category, // 'QNA' | 'TASK' | 'DOCUMENT' | 'QUIZ'
+      categoryLabel: m.categoryLabel ?? m.category ?? '',
+      title: m.title ?? '',
+      description: m.description ?? '',
+      points: m.points ?? 0,
+      actionLabel: m.actionLabel ?? '작성하러 가기',
+    })),
+    milestones: (completion?.milestones ?? []).map((m, i) => ({
+      key: m.key ?? `m-${i}`,
+      label: m.label ?? '',
+      date: m.date,
+    })),
+    currentStage: completion?.currentStage
+      ? { label: completion.currentStage.label, done: Boolean(completion.currentStage.done) }
+      : null,
+  };
 };

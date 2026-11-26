@@ -64,6 +64,7 @@ const Sidebar = () => {
   const questionsPath = `/handovers/${projectId}/questions`;
   const questionCreatePath = `${questionsPath}/create`;
   const isQuestionCreate = Boolean(matchPath(questionCreatePath, pathname));
+  const isHandoverSubPage = Boolean(matchPath('/handovers/:projectId/documents/*', pathname) || matchPath('/handovers/:projectId/status', pathname));
 
   return (
     <aside className={styles.sidebar}>
@@ -77,8 +78,7 @@ const Sidebar = () => {
         />
         {isHandoverOpen && (
           <div className={styles.subMenu}>
-            <NavLink end to="/handovers" className={({ isActive }) => isActive ? `${styles.subItem} ${styles.activeSub}` : styles.subItem}>
-
+            <NavLink end to="/handovers" className={({ isActive }) => subItemClass(isActive || isHandoverSubPage)}>
               인수인계 목록
             </NavLink>
             <NavLink end to="/handovers/create" className={({ isActive }) => subItemClass(isActive)}>

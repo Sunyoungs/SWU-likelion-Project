@@ -115,7 +115,7 @@ const HandoverCard = ({ item, selected, onSelect, onComplete }) => {
       <div className={styles.actions}>
         {isPredecessor ? (
           <>
-            <Button text="현황 보기" variant="white" className={styles.actionBtn} onClick={() => navigate(`${base}/quizzes`)} />
+            <Button text="현황 보기" variant="white" className={styles.actionBtn} onClick={() => navigate(`${base}/status`)} />
             {isCompleted ? (
               <Button text="인수인계 완료" variant="green" icon={<img src={cardCheck} alt="" width={16} height={16} />} className={`${styles.actionBtn} ${styles.staticBtn}`} tabIndex={-1} />
             ) : (

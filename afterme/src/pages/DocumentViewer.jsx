@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button';
+import Tag from '../components/Tag';
 import SearchImg from '../assets/images/document_search.svg';
 import WarningImg from '../assets/images/document_warning.svg';
 import FileImg from '../assets/images/document_file.svg';
@@ -9,15 +10,19 @@ import ExternalImg from '../assets/images/document_external.svg';
 import {
   fetchHandoverDetail,
   fetchDocumentView,
-  fetchDocumentVersions,
   recordDocumentRead,
-  acknowledgeDocument,
-  createRevisionDraft,
-  updateDocumentDraft,
   getAttachmentDownloadUrl,
+  searchDocument,
 } from '../api/handoverApi';
-import { ROLE, formatDate } from '../utils/handoverFormat';
+import { ROLE } from '../utils/handoverFormat';
 import styles from './DocumentViewer.module.css';
+
+const SEARCH_FILTERS = [
+  { key: 'ALL', label: '전체' },
+  { key: 'BODY', label: '본문' },
+  { key: 'FILE', label: '첨부 파일' },
+  { key: 'QNA', label: 'Q&A' },
+];
 
 const formatFileSize = (bytes = 0) =>
   bytes >= 1024 * 1024
@@ -26,12 +31,12 @@ const formatFileSize = (bytes = 0) =>
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const Highlight = ({ text, keyword }) => {
+const Highlight = ({ text, keyword, markClassName = styles.mark }) => {
   if (!keyword) return text;
   const parts = String(text).split(new RegExp(`(${escapeRegExp(keyword)})`, 'gi'));
   return parts.map((part, i) =>
     part.toLowerCase() === keyword.toLowerCase() ? (
-      <mark key={i} className={styles.mark}>
+      <mark key={i} className={markClassName}>
         {part}
       </mark>
     ) : (
@@ -40,10 +45,14 @@ const Highlight = ({ text, keyword }) => {
   );
 };
 
-const sectionText = (s) =>
-  [s.title, ...s.fields.flatMap((f) => [f.label, ...f.values]), ...s.attachments.map((a) => a.fileName)]
-    .join(' ')
-    .toLowerCase();
+const makeSnippet = (text, keyword, radius = 40) => {
+  const value = String(text);
+  const idx = value.toLowerCase().indexOf(keyword.toLowerCase());
+  if (idx < 0 || value.length <= radius * 2) return value;
+  const start = Math.max(0, idx - radius);
+  const end = Math.min(value.length, idx + keyword.length + radius);
+  return `${start > 0 ? '… ' : ''}${value.slice(start, end)}${end < value.length ? ' …' : ''}`;
+};
 
 const Field = ({ field, editable, keyword, onChange, onAdd }) => {
   const labelId = `label-${field.key}`;
@@ -91,7 +100,7 @@ const Field = ({ field, editable, keyword, onChange, onAdd }) => {
 
 function DocumentViewer() {
   const { projectId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const versionIdParam = searchParams.get('versionId');
 
   const navigate = useNavigate();
@@ -103,23 +112,24 @@ function DocumentViewer() {
   const [project, setProject] = useState(null);
   const [documentId, setDocumentId] = useState(null);
   const [version, setVersion] = useState(null);
-  const [sections, setSections] = useState([]); 
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [activeKey, setActiveKey] = useState(null);
-  const [keywordInput, setKeywordInput] = useState('');
-  const [keyword, setKeyword] = useState('');
-  const [searchMessage, setSearchMessage] = useState('');
   const [flashKey, setFlashKey] = useState(null);
 
-  const [versionsOpen, setVersionsOpen] = useState(false);
-  const [versions, setVersions] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [keywordInput, setKeywordInput] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState(null); 
+  const [searching, setSearching] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('ALL');
+  const [pendingScrollKey, setPendingScrollKey] = useState(null); 
+  const searchSeqRef = useRef(0);
 
   const sectionRefs = useRef({});
   const isPredecessor = project?.myRole === ROLE.PREDECESSOR;
+  const isSearchMode = searching || searchResults !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -127,8 +137,7 @@ function DocumentViewer() {
     (async () => {
       setLoading(true);
       setError('');
-      setNotice('');
-      setVersionsOpen(false);
+      setSearchResults(null);
       try {
         const [detail, view] = await Promise.all([
           fetchHandoverDetail(projectId),
@@ -165,9 +174,10 @@ function DocumentViewer() {
       cancelled = true;
     };
   }, [projectId, versionIdParam]);
+
   const sectionKeys = sections.map((s) => s.key).join('|');
   useEffect(() => {
-    if (!sectionKeys) return undefined;
+    if (!sectionKeys || isSearchMode) return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -179,57 +189,96 @@ function DocumentViewer() {
     );
     Object.values(sectionRefs.current).forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
-  }, [sectionKeys]);
+  }, [sectionKeys, isSearchMode]);
 
   const scrollToSection = useCallback((key) => {
     sectionRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveKey(key);
   }, []);
 
+  const flashSection = useCallback((key) => {
+    setFlashKey(key);
+    setTimeout(() => setFlashKey((current) => (current === key ? null : current)), 1500);
+  }, []);
+
   useEffect(() => {
-    if (loading || !topicId || scrolledTopicRef.current === topicId) return;
+    if (loading || isSearchMode || !topicId || scrolledTopicRef.current === topicId) return;
     if (!sectionRefs.current[topicId]) return;
     scrolledTopicRef.current = topicId;
     scrollToSection(topicId);
-    setFlashKey(topicId);
-    setTimeout(() => setFlashKey(null), 1500);
-  }, [loading, topicId, scrollToSection]);
+    flashSection(topicId);
+  }, [loading, isSearchMode, topicId, scrollToSection, flashSection]);
 
-  const handleSearch = (e) => {
+  useEffect(() => {
+    if (!pendingScrollKey || isSearchMode) return;
+    scrollToSection(pendingScrollKey);
+    flashSection(pendingScrollKey);
+    setPendingScrollKey(null);
+  }, [pendingScrollKey, isSearchMode, scrollToSection, flashSection]);
+
+  const closeSearch = () => {
+    searchSeqRef.current += 1; 
+    setSearching(false);
+    setSearchResults(null);
+    setKeyword('');
+  };
+
+  const handleSearch = async (e) => {
     e.preventDefault();
     const q = keywordInput.trim();
+    if (!q) {
+      closeSearch();
+      return;
+    }
+
+    const seq = ++searchSeqRef.current;
     setKeyword(q);
-    setSearchMessage('');
-    if (!q) return;
-
-    const target = sections.find((s) => sectionText(s).includes(q.toLowerCase()));
-    if (!target) {
-      setSearchMessage(`'${q}'에 해당하는 내용이 없어요.`);
-      return;
-    }
-    scrollToSection(target.key);
-    setFlashKey(target.key);
-    setTimeout(() => setFlashKey(null), 1200);
-  };
-
-  const toggleVersions = async () => {
-    if (versionsOpen) {
-      setVersionsOpen(false);
-      return;
-    }
-    setVersionsOpen(true);
+    setSearchFilter('ALL');
+    setSearching(true);
     try {
-      const list = await fetchDocumentVersions(projectId, documentId);
-      setVersions(isPredecessor ? list : list.filter((v) => v.status === 'PUBLISHED'));
+      const items = await searchDocument({ projectId, keyword: q, sections });
+      if (seq === searchSeqRef.current) setSearchResults(items);
     } catch {
-      setVersions([]);
+      if (seq === searchSeqRef.current) setSearchResults([]);
+    } finally {
+      if (seq === searchSeqRef.current) setSearching(false);
     }
   };
 
-  const selectVersion = (versionId) => {
-    setVersionsOpen(false);
-    setSearchParams({ versionId: String(versionId) }, { state: locationState });
+  const moveToResult = (item) => {
+    if (item.type === 'QNA') {
+      navigate(`/handovers/${projectId}/questions/${item.threadId}`);
+      return;
+    }
+    setSearchResults(null);
+    if (item.sectionKey) setPendingScrollKey(item.sectionKey);
   };
+
+  const handleTocClick = (key) => {
+    if (isSearchMode) {
+      searchSeqRef.current += 1;
+      setSearching(false);
+      setSearchResults(null);
+      setPendingScrollKey(key);
+      return;
+    }
+    scrollToSection(key);
+  };
+
+  const resultCounts = useMemo(() => {
+    const items = searchResults ?? [];
+    return {
+      ALL: items.length,
+      BODY: items.filter((i) => i.type === 'BODY').length,
+      FILE: items.filter((i) => i.type === 'FILE').length,
+      QNA: items.filter((i) => i.type === 'QNA').length,
+    };
+  }, [searchResults]);
+
+  const filteredResults = useMemo(
+    () => (searchResults ?? []).filter((i) => searchFilter === 'ALL' || i.type === searchFilter),
+    [searchResults, searchFilter]
+  );
 
   const updateField = (sectionKey, fieldKey, updater) =>
     setSections((prev) =>
@@ -250,42 +299,6 @@ function DocumentViewer() {
   const addFieldValue = (sectionKey, fieldKey) =>
     updateField(sectionKey, fieldKey, (f) => ({ ...f, values: [...f.values, ''] }));
 
-  const handleConfirm = async () => {
-    if (!version || saving) return;
-    setSaving(true);
-    setNotice('');
-    try {
-      if (isPredecessor) {
-        let targetVersionId = version.versionId;
-        if (version.status === 'PUBLISHED') {
-          const created = await createRevisionDraft(projectId, documentId);
-          targetVersionId = created?.versionId ?? created?.id;
-        }
-        await updateDocumentDraft(projectId, documentId, targetVersionId, {
-          sections: sections.map((s) => ({
-            key: s.key,
-            fields: s.fields.map((f) => ({
-              key: f.key,
-              values: f.values.filter((v) => v.trim() !== ''),
-            })),
-          })),
-        });
-        if (String(targetVersionId) !== String(version.versionId)) {
-          setSearchParams({ versionId: String(targetVersionId) }, { state: locationState });
-        }
-        setNotice('수정 초안을 저장했어요. 후임자에게는 공개 승인 후 보여요.');
-      } else {
-        await acknowledgeDocument(projectId, documentId, version.versionId);
-        setVersion((v) => ({ ...v, acknowledged: true }));
-        setNotice('인수인계서 숙지 확인이 기록되었어요.');
-      }
-    } catch {
-      setNotice('처리하지 못했어요. 잠시 후 다시 시도해 주세요.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDownload = async (attachment) => {
     try {
       const { url } = await getAttachmentDownloadUrl(projectId, attachment.attachmentId);
@@ -294,8 +307,12 @@ function DocumentViewer() {
         return;
       }
       window.open(url, '_blank', 'noopener');
-    } catch {
-      alert('파일을 내려받지 못했어요.');
+    } catch (err) {
+      alert(
+        err?.response?.status === 404
+          ? '파일을 찾을 수 없거나 내려받을 권한이 없어요.'
+          : '파일을 내려받지 못했어요. 잠시 후 다시 시도해 주세요.'
+      );
     }
   };
 
@@ -319,7 +336,64 @@ function DocumentViewer() {
 
   const title = project?.title ?? '';
   const isDraft = version.status === 'DRAFT';
-  const confirmDisabled = saving || (!isPredecessor && version.acknowledged);
+
+  const searchPanel = (
+    <div className={styles.results}>
+      <h2 className={styles.resultsTitle}>검색 결과</h2>
+      <p className={styles.resultsDesc}>
+        '{keyword}' · {title} 안에서 {resultCounts.ALL}건을 찾았어요.
+      </p>
+
+      <div className={styles.resultFilters} role="group" aria-label="검색 결과 필터">
+        {SEARCH_FILTERS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            className={styles.resultFilterBtn}
+            aria-pressed={searchFilter === key}
+            onClick={() => setSearchFilter(key)}
+          >
+            <Tag
+              text={`${label} ${resultCounts[key]}`}
+              variant={searchFilter === key ? 'active' : 'inactive'}
+              className={styles.resultFilterTag}
+            />
+          </button>
+        ))}
+      </div>
+
+      {searching ? (
+        <p className={styles.searching}>검색 중...</p>
+      ) : filteredResults.length > 0 ? (
+        <ul className={styles.resultList}>
+          {filteredResults.map((item) => (
+            <li key={item.id} className={styles.resultItem}>
+              <div className={styles.resultBody}>
+                <p className={styles.resultLocation}>{item.location}</p>
+                <p className={styles.resultText}>
+                  <Highlight
+                    text={makeSnippet(item.text, keyword)}
+                    keyword={keyword}
+                    markClassName={styles.markStrong}
+                  />
+                </p>
+              </div>
+              <button type="button" className={styles.resultMove} onClick={() => moveToResult(item)}>
+                해당 위치로 이동
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className={styles.noResult}>
+          <p className={styles.noResultTitle}>검색 결과 없음</p>
+          <p className={styles.noResultDesc}>
+            '{keyword}'와 일치하는 내용이 없어요. 다른 키워드로 검색하거나 전임자에게 질문해 보세요.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className={styles.page}>
@@ -329,19 +403,20 @@ function DocumentViewer() {
       </header>
 
       <div className={styles.layout}>
-        {/* 검색 */}
         <form className={styles.searchRow} onSubmit={handleSearch} role="search">
           <label className={styles.searchBox}>
             <img src={SearchImg} alt="" width={20} height={20} />
             <input
               className={styles.searchInput}
               value={keywordInput}
-              onChange={(e) => setKeywordInput(e.target.value)}
+              onChange={(e) => {
+                setKeywordInput(e.target.value);
+                if (!e.target.value.trim()) closeSearch(); 
+              }}
               placeholder="검색어를 입력해주세요."
               aria-label="인수인계서 검색"
             />
           </label>
-          {searchMessage && <p className={styles.searchMessage}>{searchMessage}</p>}
         </form>
 
         <aside className={styles.aside}>
@@ -357,34 +432,12 @@ function DocumentViewer() {
             <button
               type="button"
               className={styles.prevBtn}
-              onClick={toggleVersions}
-              aria-expanded={versionsOpen}
+              onClick={() =>
+                navigate(`/handovers/${projectId}/documents/versions`, { state: locationState })
+              }
             >
               이전 버전 확인하기 <img src={ExternalImg} alt="" width={10} height={10} />
             </button>
-            {versionsOpen && (
-              <ul className={styles.versionList}>
-                {versions.length === 0 && <li className={styles.versionEmpty}>다른 버전이 없어요.</li>}
-                {versions.map((v) => {
-                  const current = String(v.versionId) === String(version.versionId);
-                  return (
-                    <li key={v.versionId}>
-                      <button
-                        type="button"
-                        className={`${styles.versionItem} ${current ? styles.versionCurrent : ''}`}
-                        onClick={() => selectVersion(v.versionId)}
-                        aria-current={current ? 'true' : undefined}
-                      >
-                        <span>{v.versionLabel}</span>
-                        <span className={styles.versionDate}>
-                          {v.status === 'DRAFT' ? '초안' : formatDate(v.createdAt)}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
           </div>
 
           <nav aria-label="목차">
@@ -396,7 +449,7 @@ function DocumentViewer() {
                     type="button"
                     className={`${styles.tocItem} ${activeKey === s.key ? styles.tocActive : ''}`}
                     aria-current={activeKey === s.key ? 'true' : undefined}
-                    onClick={() => scrollToSection(s.key)}
+                    onClick={() => handleTocClick(s.key)}
                   >
                     {i + 1}. {s.title}
                   </button>
@@ -407,83 +460,84 @@ function DocumentViewer() {
 
           {returnButton}
         </aside>
+
         <div className={styles.content}>
-          {sections.map((section, i) => (
-            <section
-              key={section.key}
-              id={`section-${section.key}`}
-              data-section-key={section.key}
-              ref={(el) => {
-                sectionRefs.current[section.key] = el;
-              }}
-              className={`${styles.section} ${flashKey === section.key ? styles.flash : ''}`}
-              aria-labelledby={`heading-${section.key}`}
-            >
-              <div className={styles.sectionHead}>
-                <h2 className={styles.sectionTitle} id={`heading-${section.key}`}>
-                  {i + 1}. <Highlight text={section.title} keyword={keyword} />
-                </h2>
-                {section.basis && <p className={styles.basis}>근거 : {section.basis}</p>}
-              </div>
+          {isSearchMode ? (
+            searchPanel
+          ) : (
+            <>
+              {sections.map((section, i) => (
+                <section
+                  key={section.key}
+                  id={`section-${section.key}`}
+                  data-section-key={section.key}
+                  ref={(el) => {
+                    sectionRefs.current[section.key] = el;
+                  }}
+                  className={`${styles.section} ${flashKey === section.key ? styles.flash : ''}`}
+                  aria-labelledby={`heading-${section.key}`}
+                >
+                  <div className={styles.sectionHead}>
+                    <h2 className={styles.sectionTitle} id={`heading-${section.key}`}>
+                      {i + 1}. <Highlight text={section.title} keyword={keyword} />
+                    </h2>
+                    {section.basis && <p className={styles.basis}>근거 : {section.basis}</p>}
+                  </div>
 
-              {section.warning && (
-                <div className={styles.warning} role="note">
-                  <img src={WarningImg} alt="" width={18} height={18} />
-                  <span>{section.warning}</span>
-                </div>
-              )}
+                  {section.warning && (
+                    <div className={styles.warning} role="note">
+                      <img src={WarningImg} alt="" width={18} height={18} />
+                      <span>{section.warning}</span>
+                    </div>
+                  )}
 
-              {section.fields.map((field) => (
-                <Field
-                  key={field.key}
-                  field={field}
-                  editable={isPredecessor}
-                  keyword={keyword}
-                  onChange={(idx, value) => changeFieldValue(section.key, field.key, idx, value)}
-                  onAdd={() => addFieldValue(section.key, field.key)}
-                />
+                  {section.fields.map((field) => (
+                    <Field
+                      key={field.key}
+                      field={field}
+                      editable={isPredecessor}
+                      keyword={keyword}
+                      onChange={(idx, value) => changeFieldValue(section.key, field.key, idx, value)}
+                      onAdd={() => addFieldValue(section.key, field.key)}
+                    />
+                  ))}
+
+                  {section.attachments.length > 0 && (
+                    <ul className={styles.files}>
+                      {section.attachments.map((file) => (
+                        <li key={file.attachmentId} className={styles.file}>
+                          <span className={styles.fileIcon}>
+                            <img src={FileImg} alt="" width={20} height={20} />
+                          </span>
+                          <span className={styles.fileName}>
+                            <Highlight text={file.fileName} keyword={keyword} />
+                          </span>
+                          <span className={styles.fileSize}>{formatFileSize(file.size)}</span>
+                          <button
+                            type="button"
+                            className={styles.downloadBtn}
+                            onClick={() => handleDownload(file)}
+                            aria-label={`${file.fileName} 다운로드`}
+                          >
+                            <img src={DownloadImg} alt="" width={20} height={20} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
               ))}
 
-              {section.attachments.length > 0 && (
-                <ul className={styles.files}>
-                  {section.attachments.map((file) => (
-                    <li key={file.attachmentId} className={styles.file}>
-                      <span className={styles.fileIcon}>
-                        <img src={FileImg} alt="" width={20} height={20} />
-                      </span>
-                      <span className={styles.fileName}>
-                        <Highlight text={file.fileName} keyword={keyword} />
-                      </span>
-                      <span className={styles.fileSize}>{formatFileSize(file.size)}</span>
-                      <button
-                        type="button"
-                        className={styles.downloadBtn}
-                        onClick={() => handleDownload(file)}
-                        aria-label={`${file.fileName} 다운로드`}
-                      >
-                        <img src={DownloadImg} alt="" width={20} height={20} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          ))}
-
-          <div className={styles.footer}>
-            {notice && (
-              <p className={styles.notice} role="status">
-                {notice}
-              </p>
-            )}
-            <Button
-              text={!isPredecessor && version.acknowledged ? '숙지 완료' : saving ? '처리 중...' : '확인'}
-              variant="white"
-              className={styles.confirmBtn}
-              disabled={confirmDisabled}
-              onClick={handleConfirm}
-            />
-          </div>
+              <div className={styles.footer}>
+                <Button
+                  text="확인"
+                  variant="white"
+                  className={styles.confirmBtn}
+                  onClick={() => navigate('/handovers')}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

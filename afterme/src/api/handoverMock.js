@@ -1,6 +1,3 @@
-// 백엔드 연결 전 화면 확인용 목업 데이터 / 목업 API
-// handoverApi.js 의 USE_MOCK 이 true 일 때만 사용됩니다.
-
 // true로 바꾸면 '참여 중인 인수인계가 없어요' 빈 화면부터 확인할 수 있어요.
 // (빈 화면에서 초대 코드 LNK-26-7QX4 를 입력하면 목록에 카드가 추가됩니다)
 const START_EMPTY = false;
@@ -17,6 +14,14 @@ const daysFromNow = (offset) => {
   d.setDate(d.getDate() + offset);
   return d.toISOString();
 };
+
+const shiftDate = (value, offset) => {
+  const d = new Date(value);
+  d.setDate(d.getDate() + offset);
+  return d.toISOString();
+};
+
+/* ------------------------------ 인수인계 목록 ------------------------------ */
 
 const handovers = START_EMPTY
   ? []
@@ -83,6 +88,10 @@ const handovers = START_EMPTY
       },
     ];
 
+const findHandover = (projectId) => handovers.find((h) => String(h.projectId) === String(projectId));
+
+/* ------------------------------ 초대 코드 ------------------------------ */
+
 const invitations = {
   'LNK-26-7QX4': {
     organizationName: '서울여자대학교 연합동아리 LINKER',
@@ -94,6 +103,8 @@ const invitations = {
 };
 
 const findInvitation = (code = '') => invitations[code.trim().toUpperCase()];
+
+/* ------------------------------ 인수인계서 버전 ------------------------------ */
 
 const baseSections = [
   {
@@ -109,7 +120,7 @@ const baseSections = [
         label: '업무 개요 상세',
         multiline: true,
         values: [
-          '동아리 공식 인스타그램과 블로그를 운영합니다.\n행사 2주 전 홍보물 시안을 만들고, 회장단 검수 후 업로드합니다.',
+          '동아리 공식 인스타그램과 블로그를 운영합니다.\n행사 2주 전 홍보물 시안을 만들고, 회장단 검수 후 업로드합니다.\n포스터 · 현수막 인쇄는 정문 앞 한빛인쇄에 발주합니다.',
         ],
       },
     ],
@@ -126,7 +137,11 @@ const baseSections = [
         values: ['1) 콘텐츠 캘린더 확인 → 2) Canva로 시안 제작 → 3) 회장단 검수 → 4) 예약 업로드 → 5) 반응 리포트 작성'],
       },
       { key: 'deadlines', label: '주요 마감 일정', values: ['매월 마지막 주 금요일 월간 리포트 제출'] },
-      { key: 'tools', label: '관련 시스템 도구', values: ['Canva', 'Instagram 비즈니스 계정', 'Notion 콘텐츠 캘린더'] },
+      {
+        key: 'tools',
+        label: '사용 도구 및 계정',
+        values: ['콘텐츠 일정은 Notion, 디자인은 Canva를 사용합니다.', '공용 계정 권한은 담당자 변경 시 별도로 이전합니다.'],
+      },
     ],
   },
   {
@@ -135,7 +150,7 @@ const baseSections = [
     basis: 'AI 인터뷰 답변 불충분, 추가 작성이 필요합니다.',
     warning: '대응 절차와 에스컬레이션 대상이 비어 있어요.',
     fields: [
-      { key: 'type', label: '예외 상황 유형', values: ['게시물 예약 업로드 실패'] },
+      { key: 'type', label: '예외 상황 유형', values: ['게시물 예약 업로드 실패', '인쇄물 납품 지연'] },
       { key: 'action', label: '대응 절차 및 조치 방법', multiline: true, values: [''] },
       { key: 'escalation', label: '담당 에스컬레이션 대상', values: [''] },
     ],
@@ -164,6 +179,27 @@ const baseSections = [
   },
 ];
 
+const setValues = (sections, sectionKey, fieldKey, values) => {
+  const field = sections.find((s) => s.key === sectionKey)?.fields.find((f) => f.key === fieldKey);
+  if (field) field.values = values;
+};
+
+// v1.1 — 사용 도구 및 계정 권한 내용 보완
+const v11Sections = clone(baseSections);
+setValues(v11Sections, 'procedure', 'tools', [
+  '콘텐츠 일정은 Notion, 디자인은 Canva를 사용합니다.',
+  '공용 계정 권한은 담당자 변경 시 관리자(회장) 확인 후 이전합니다.',
+]);
+
+// v1.2 — Q&A 답변 반영, 연락처 · 참고 자료 추가
+const v12Sections = clone(v11Sections);
+setValues(v12Sections, 'contacts', 'name', ['학생지원팀 주무관', '한빛인쇄 실장']);
+setValues(v12Sections, 'contacts', 'org', ['교내 게시물 승인', '포스터 · 현수막 발주']);
+setValues(v12Sections, 'contacts', 'phone', ['내선 2214', '010-0000-0000']);
+v12Sections
+  .find((s) => s.key === 'references')
+  .attachments.push({ attachmentId: 4, fileName: '25기_콘텐츠캘린더.xlsx', size: 204800 });
+
 const versions = [
   {
     versionId: 1,
@@ -172,19 +208,64 @@ const versions = [
     authorName: '김정아',
     description: '최초 공개 승인 · AI 초안 기반',
     acknowledged: false,
-    createdAt: daysFromNow(-3),
+    createdAt: daysFromNow(-6),
     sections: baseSections,
+  },
+  {
+    versionId: 2,
+    versionLabel: 'v1.1',
+    status: 'DRAFT',
+    authorName: '김정아',
+    description: '사용 도구 · 계정 권한 보완',
+    acknowledged: false,
+    createdAt: daysFromNow(-3),
+    sections: v11Sections,
+  },
+  {
+    versionId: 3,
+    versionLabel: 'v1.2',
+    status: 'DRAFT',
+    authorName: '김정아',
+    description: 'Q&A 답변 반영 · 연락처 추가',
+    acknowledged: false,
+    createdAt: daysFromNow(-1),
+    sections: v12Sections,
   },
 ];
 
-const findVersion = (versionId) =>
-  versionId ? versions.find((v) => String(v.versionId) === String(versionId)) : versions[versions.length - 1];
+// versionId 가 없으면 가장 최근 '공개 승인' 버전
+const findVersion = (versionId) => {
+  if (versionId) return versions.find((v) => String(v.versionId) === String(versionId));
+  const published = versions.filter((v) => v.status === 'PUBLISHED');
+  return published[published.length - 1] ?? versions[versions.length - 1];
+};
+
+/* ------------------------------ Q&A ------------------------------ */
+
+const questions = [
+  {
+    threadId: 1,
+    title: '포스터 인쇄 발주는 언제 해야 하나요?',
+    content: '행사 포스터 인쇄는 몇 주 전에 발주해야 하나요?',
+    answer: '행사 2주 전까지 한빛인쇄에 발주하면 됩니다.',
+    status: 'RESOLVED',
+  },
+  {
+    threadId: 2,
+    title: '인스타그램 공용 계정 비밀번호는 어디서 확인하나요?',
+    content: '공용 계정 로그인 정보를 어디에서 받을 수 있는지 궁금해요.',
+    answer: '',
+    status: 'UNRESOLVED',
+  },
+];
+
+/* ------------------------------ 목업 API ------------------------------ */
 
 export const mockApi = {
   getHandovers: () => wait(handovers),
 
   getHandover: (projectId) => {
-    const item = handovers.find((h) => String(h.projectId) === String(projectId));
+    const item = findHandover(projectId);
     return item ? wait(item) : fail(404, 'RESOURCE_NOT_FOUND', '인수인계를 찾을 수 없습니다.');
   },
 
@@ -196,7 +277,7 @@ export const mockApi = {
   joinInvitation: (code) => {
     const invitation = findInvitation(code);
     if (!invitation) return fail(404, 'RESOURCE_NOT_FOUND', '해당 초대코드는 존재하지 않습니다.');
-    if (handovers.some((h) => h.projectId === invitation.projectId)) {
+    if (findHandover(invitation.projectId)) {
       return fail(409, 'CONFLICT', '이미 참여 중인 인수인계입니다.');
     }
     handovers.unshift({
@@ -218,7 +299,7 @@ export const mockApi = {
   },
 
   completeHandover: (projectId) => {
-    const item = handovers.find((h) => String(h.projectId) === String(projectId));
+    const item = findHandover(projectId);
     if (item) item.status = 'COMPLETED';
     return wait(null);
   },
@@ -230,8 +311,7 @@ export const mockApi = {
       : fail(404, 'RESOURCE_NOT_FOUND', '인수인계서 버전을 찾을 수 없습니다.');
   },
 
-  getVersions: () =>
-    wait(versions.map(({ sections, ...meta }) => meta)),
+  getVersions: () => wait(versions.map(({ sections, ...meta }) => meta)),
 
   createRevision: () => {
     const base = versions[versions.length - 1];
@@ -265,5 +345,66 @@ export const mockApi = {
     const target = findVersion(versionId);
     if (target) target.acknowledged = true;
     return wait(null);
+  },
+
+  getQuestions: () => wait(questions),
+
+  // GET /handovers/{projectId}/completeness 목업
+  getCompleteness: (projectId) => {
+    const item = findHandover(projectId);
+    if (!item) return fail(404, 'RESOURCE_NOT_FOUND', '인수인계를 찾을 수 없습니다.');
+    const met = item.completenessScore >= item.minCompletenessScore;
+    return wait({
+      score: item.completenessScore,
+      targetScore: item.minCompletenessScore,
+      missingItems: met
+        ? []
+        : [
+            {
+              id: 1,
+              category: 'QNA',
+              categoryLabel: '질문 해결률',
+              title: 'Q&A 질문 미답변 2건',
+              description: '후임자가 남긴 질문 2건이 아직 해결되지 않았어요.',
+              points: 6,
+              actionLabel: '작성하러 가기',
+            },
+            {
+              id: 2,
+              category: 'TASK',
+              categoryLabel: '업무 등록',
+              title: '주요 연락처 1건 누락',
+              description: '학생지원팀 주무관의 연락처가 입력되지 않았어요.',
+              points: 4,
+              actionLabel: '작성하러 가기',
+            },
+            {
+              id: 3,
+              category: 'QUIZ',
+              categoryLabel: '퀴즈',
+              title: '퀴즈 충족 점수 미달',
+              description: '후임자의 퀴즈 점수가 최소 기준에 도달하지 않았어요.',
+              points: 5,
+              actionLabel: '점수 확인하기',
+            },
+          ],
+    });
+  },
+
+  // GET /handovers/{projectId}/completion 목업
+  getCompletion: (projectId) => {
+    const item = findHandover(projectId);
+    if (!item) return fail(404, 'RESOURCE_NOT_FOUND', '인수인계를 찾을 수 없습니다.');
+    return wait({
+      milestones: [
+        { key: 'created', label: '생성', date: item.startDate },
+        { key: 'published', label: '공개', date: shiftDate(item.startDate, 2) },
+        { key: 'quiz1', label: '1차 퀴즈', date: shiftDate(item.startDate, 11) },
+        { key: 'approval', label: '최종 승인', date: shiftDate(item.deadline, -2) },
+        { key: 'quiz2', label: '2차 퀴즈', date: shiftDate(item.deadline, -2) },
+        { key: 'deadline', label: '마감', date: item.deadline },
+      ],
+      currentStage: { label: '1차 후임자 퀴즈', done: item.quizStatus === 'PASSED' },
+    });
   },
 };
