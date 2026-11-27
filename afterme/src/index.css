@@ -39,6 +39,7 @@
   --purple-8: #850ca6;
   --purple-10: #540869;
   --blue: #a0bcff;
+  --blue-0: #f7f9fe; /* 사이드바 배경 (Figma 543:10966) */
   --blue-1: #e7f1fe;
   --blue-2: #c6ddfd;
   --blue-3: #9ac2fc;
@@ -46,6 +47,7 @@
   --blue-6: #1371f7;
   --blue-8: #0d50af;
   --blue-10: #09336f;
+  --background: #ffffff;
   --font-family: 'Pretendard', sans-serif;
 }
 body {

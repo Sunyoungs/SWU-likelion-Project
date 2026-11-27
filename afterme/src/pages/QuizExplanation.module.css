@@ -1,0 +1,132 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 1060px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+.body {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: 336px;
+  flex-shrink: 0;
+}
+
+.numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-bottom: -2px; /* 문항 영역과 취약 영역 카드 간격 24px */
+}
+
+.label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--gray-6);
+}
+
+.numberGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  justify-content: space-between;
+  gap: 8px;
+  width: 230px;
+  padding: 0 8px;
+}
+
+/* --- 취약 영역 분석 --- */
+.weakCard {
+  min-height: 330px;
+  padding: 22px 24px 44px;
+  border-radius: 5px;
+  background-color: var(--blue-1);
+}
+
+.weakTitle {
+  margin: 0 0 20px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--gray-6);
+}
+
+.weakList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weakItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weakRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gray-6);
+}
+
+.weakCard .weakBar {
+  width: 100%;
+}
+
+.side .readButton {
+  width: 100%;
+}
+
+/* --- 문제와 해설 --- */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 700px;
+  max-width: 100%;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+  padding: 20px 24px;
+  border-radius: 5px;
+  background-color: var(--blue-1);
+  font-size: 16px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+.explanationTitle {
+  margin: 0;
+  font-weight: 500;
+}
+
+.explanationText {
+  margin: 0;
+}

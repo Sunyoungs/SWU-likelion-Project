@@ -1,0 +1,222 @@
+.page {
+  max-width: 1000px;
+  padding-right: 24px; /* 왼쪽 92px는 Layout이 담당 */
+}
+.message {
+  padding: 120px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--gray-3);
+}
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-6);
+}
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--gray-3);
+}
+.layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  column-gap: 32px;
+  margin-top: 28px;
+}
+.colTitle {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-6);
+}
+.versionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.versionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--blue-3);
+  border-radius: 8px;
+  background-color: white;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.versionCard:hover {
+  border-color: var(--blue-4);
+}
+.versionCard:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+.selected,
+.selected:hover {
+  border: 2px solid var(--blue-6);
+  padding: 9px 11px; 
+  box-shadow: 0 2px 8px rgba(19, 113, 247, 0.12);
+}
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.versionLabel {
+  font-size: 15px;
+  color: var(--gray-6);
+}
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+}
+.badgePublished {
+  background-color: var(--green-4);
+}
+.badgeLatest {
+  background: linear-gradient(90deg, var(--blue-6) 0%, var(--blue-4) 100%);
+}
+.cardDate {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--gray-2);
+}
+.cardMeta {
+  font-size: 11px;
+  color: var(--gray-3);
+}
+.cardDesc {
+  font-size: 11px;
+  color: var(--gray-6);
+}
+.compareHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.compareRange {
+  font-size: 12px;
+  color: var(--gray-4);
+}
+.compareRange strong {
+  color: var(--gray-6);
+}
+.compareBox {
+  min-height: 82px;
+  padding: 20px 24px;
+  border: 1px solid var(--gray-2);
+  border-radius: 8px;
+  background-color: white;
+}
+.compareEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--gray-1);
+}
+.emptyText {
+  margin: 0;
+  font-size: 14px;
+  color: var(--gray-6);
+}
+.diffSection + .diffSection {
+  margin-top: 26px;
+}
+.diffTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-6);
+}
+.diffGroup {
+  margin-top: 12px;
+}
+.groupLabel {
+  margin: 0 0 6px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-4);
+}
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--gray-6);
+}
+.sign {
+  flex-shrink: 0;
+  width: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+.lineText {
+  min-width: 0;
+}
+.same {
+  padding-left: 32px;
+}
+.same .sign {
+  display: none;
+}
+.removed {
+  color: var(--gray-2);
+}
+.removed .lineText {
+  text-decoration: line-through;
+}
+.removed .sign {
+  color: var(--pink-6);
+}
+.added {
+  border-color: var(--blue-4);
+}
+.added .sign {
+  color: var(--blue-6);
+}
+.summary {
+  margin: 28px 0 0;
+  font-size: 11px;
+  color: var(--gray-3);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 56px;
+}
+.openBtn {
+  padding: 12px 22px;
+  font-size: 13px;
+}
