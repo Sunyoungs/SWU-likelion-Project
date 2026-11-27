@@ -6,8 +6,8 @@
  */
 .page {
   width: 100%;
-  max-width: calc(972px + 92px);
-  padding: 28px 0 80px 92px;
+  max-width: 972px;
+  padding: 28px 0 80px; /* 왼쪽 92px는 Layout이 담당 */
 }
 
 /* Headline1 24 B */

@@ -15,5 +15,8 @@
   min-width: 0;
   background-color: #ffffff;
   padding: 32px;
+  /* 사이드바와 본문 사이 간격: 모든 화면 92px로 통일 (디자인 기준).
+     화면이 좁으면(창 너비 1292px 미만) 32px까지 줄어든다. 각 페이지는 왼쪽 여백을 따로 두지 않는다. */
+  padding-left: clamp(32px, calc(100vw - 1200px), 92px);
   overflow-y: auto;
 }

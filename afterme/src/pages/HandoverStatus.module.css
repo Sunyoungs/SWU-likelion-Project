@@ -1,7 +1,6 @@
 .page {
   max-width: 920px;
-  margin: 0 auto;
-  padding: 0 24px;
+  padding-right: 24px; /* 왼쪽 92px는 Layout이 담당 */
 }
 .message {
   padding: 120px 0;

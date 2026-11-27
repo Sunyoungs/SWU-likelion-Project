@@ -6,8 +6,8 @@
  */
 .page {
   width: 100%;
-  max-width: calc(967px + 90px);
-  padding: 38px 0 80px 90px;
+  max-width: 967px;
+  padding: 38px 0 80px; /* 왼쪽 92px는 Layout이 담당 */
 }
 
 /* ---------- 제목 + 읽지 않은 알림 (gap 20) ---------- */
