@@ -42,3 +42,21 @@ export function clearTokens() {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('accessTokenExpiresAt');
 }
+
+/**
+ * 로그아웃
+ * POST /api/auth/logout · Authorization 헤더 필요 (axiosClient 가 자동으로 붙임)
+ * 요청: { refreshToken } · 성공 204 (응답 없음)
+ * 실패 400 INVALID_INPUT / 401 인증 실패
+ * - 서버 요청이 실패해도(토큰 만료 등) 내 컴퓨터의 토큰은 항상 지워서 로그아웃 상태로 만듦
+ */
+export async function logout() {
+  const refreshToken = localStorage.getItem('refreshToken');
+  try {
+    if (refreshToken) {
+      await axiosClient.post('/auth/logout', { refreshToken }, { skipErrorAlert: true });
+    }
+  } finally {
+    clearTokens();
+  }
+}
