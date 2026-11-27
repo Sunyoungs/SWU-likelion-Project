@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './HandoverCreate.module.css';
-import extra from './HandoverCreate.module.css';
+import { ApiError, createHandoverApi } from '../api/handoverCreateApi';
 
-/* ---------- 상수 ---------- */
+const extra = styles;
+
 const CYCLE_OPTIONS = ['매일', '매주', '매월', '학기 단위', '연 1회', '비정기'];
 const IMPORTANCE_OPTIONS = ['상', '중', '하'];
 const ORG_OPTIONS = ['기획팀', '홍보팀', '총무팀', '디자인팀', '대외협력팀'];
@@ -13,17 +14,15 @@ const KEYWORDS = [
 ];
 const TOC = ['업무 개요', '파일 첨부', 'AI 답변 입력', '마감 설정'];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'xlsx'];
-const MAX_FOLLOW_UP = 2; // 같은 주제의 추가 질문 최대 횟수
+const MAX_FOLLOW_UP = 2;
 
-// ⚠️ 시안 문구는 완성도 70% / 퀴즈 80%, 기능명세서는 완성도 80% / 퀴즈 70% 로 서로 달라요.
-// 확정되면 이 두 값만 바꾸면 돼요.
 const MIN_COMPLETION = 70;
 const MIN_QUIZ_CUTOFF = 80;
-const YEAR_COUNT = 5; // 올해부터 5년 (시안: 2026 ~ 2030)
+const YEAR_COUNT = 5;
+const MAX_DEADLINE_DAYS = 31;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const LINK_FIELDS = [
   { key: 'notion', label: '노션' },
   { key: 'drive', label: '구글 드라이브' },
@@ -42,7 +41,10 @@ const API_ERROR_MESSAGE = {
   401: '로그인이 만료되었어요. 다시 로그인해 주세요.',
   403: '이 조직의 관리자만 인수인계서를 만들 수 있어요.',
   404: '조직 정보를 찾을 수 없어요.',
+  409: '현재 상태와 충돌해서 처리하지 못했어요. 새로고침 후 다시 시도해 주세요.',
 };
+const DEFAULT_ERROR = '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
+const NETWORK_ERROR = '네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
 
 const INITIAL_CLOSING = {
   year: '',
@@ -54,9 +56,8 @@ const INITIAL_CLOSING = {
   inviteCode: '',
 };
 
-/* ---------- 날짜 유틸 (Asia/Seoul 기준) ---------- */
 const seoulToday = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()); // YYYY-MM-DD
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 
 const addDays = (ymd, days) => {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -71,29 +72,33 @@ const diffDays = (fromYmd, toYmd) => {
   const [ty, tm, td] = toYmd.split('-').map(Number);
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
 };
-/** YYYY-MM-DD, 하나라도 비어 있으면 '' */
 const toDeadline = ({ year, month, day }) => (year && month && day ? `${year}-${month}-${day}` : '');
 
 const fileExt = (name) => name.split('.').pop().toLowerCase();
 const fileSizeLabel = (b) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)}MB` : `${Math.ceil(b / 1024)}KB`);
 
-/* ---------- AI 질문 요청 (TODO: 실제 API로 교체) ---------- */
-// 업로드한 파일/입력 내용을 바탕으로 AI가 질문을 만들어 주는 부분.
-// 반환 형식: [{ id, text, followUpOf?: id, followUpIndex?: number }]
-async function requestAiQuestions(/* { files, links, overview } */) {
-  // TODO: POST /api/... 연동
-  return Array.from({ length: 8 }, (_, i) => ({ id: `q${i + 1}`, text: `질문 ${i + 1}` }));
-}
-// 답변 기반 추가 질문 요청. 없으면 null
-async function requestFollowUp(/* question, answer */) {
-  // TODO: 연동
-  return null;
-}
+const hasText = (arr) => arr.some((v) => v.trim());
+const clean = (arr) => arr.map((v) => v.trim()).filter(Boolean);
+const joinAnswer = (arr) => clean(arr ?? []).join('\n');
+const idOf = (data) => data?.projectId ?? data?.id ?? null;
+const taskIdOf = (data) => data?.taskId ?? data?.id ?? null;
 
-/* ---------- 작은 재사용 컴포넌트 ---------- */
+/* 에러 → 화면 메시지
+   - 서버 응답(ApiError): 400이면 서버가 준 필드 검증 메시지(errors[0].message)를 우선 사용
+   - 서버 코드가 있으면 상태별 안내문, 우리가 직접 던진 에러(code 없음)는 그 메시지를 그대로 사용
+   - 응답 없는 네트워크 오류만 "네트워크 확인" 안내, 그 외 코드 오류는 일반 안내 */
+const errorMessage = (err) => {
+  if (err instanceof ApiError) {
+    const fieldMsg = err.errors?.[0]?.message;
+    if (err.status === 400 && fieldMsg) return fieldMsg;
+    if (err.code) return API_ERROR_MESSAGE[err.status] ?? err.message ?? DEFAULT_ERROR;
+    return err.message || API_ERROR_MESSAGE[err.status] || DEFAULT_ERROR;
+  }
+  if (err?.isAxiosError || err?.request) return NETWORK_ERROR;
+  return DEFAULT_ERROR;
+};
 
-/** 값이 여러 개 늘어날 수 있는 입력 목록 (추가 버튼 포함) */
-function MultiInput({ values, onChange, placeholder, small = false, multiline = false, hideAdd = false }) {
+export function MultiInput({ values, onChange, placeholder, small = false, multiline = false, hideAdd = false }) {
   const setAt = (i, v) => onChange(values.map((x, idx) => (idx === i ? v : x)));
   const add = () => onChange([...values, '']);
   const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
@@ -147,7 +152,6 @@ function Select({ value, onChange, options, className = '' }) {
   );
 }
 
-/** 테두리 박스 안에 필드 묶음을 가지는 반복 그룹 */
 function GroupList({ items, onChange, fields, makeEmpty }) {
   const setField = (idx, key, value) =>
     onChange(items.map((it, i) => (i === idx ? { ...it, [key]: value } : it)));
@@ -218,7 +222,7 @@ function SectionHead({ number, title, desc, meta }) {
   );
 }
 
-function AiError({ onRetry }) {
+function AiError({ onRetry, message = 'AI 분석에 실패했어요. 작성한 답변은 그대로 남아 있어요.' }) {
   return (
     <div className={extra.aiError} role="alert">
       <span className={extra.aiErrorMsg}>
@@ -227,14 +231,14 @@ function AiError({ onRetry }) {
           <path d="M12 10v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           <circle cx="12" cy="18" r="1.2" fill="currentColor" />
         </svg>
-        AI 분석에 실패했어요. 작성한 답변은 그대로 저장되어 있어요.
+        {message}
       </span>
       <button type="button" className={extra.retryBtn} onClick={onRetry}>다시 시도</button>
     </div>
   );
 }
 
-function Footer({ onPrev, onNext, nextLabel = '다음', nextEnabled = true, warning, loading }) {
+function Footer({ onPrev, onNext, nextLabel = '다음', nextEnabled = true, warning, loading, loadingLabel = '생성 중...' }) {
   return (
     <div className={styles.footer}>
       {warning && <p className={extra.warning} role="alert">{warning}</p>}
@@ -249,14 +253,13 @@ function Footer({ onPrev, onNext, nextLabel = '다음', nextEnabled = true, warn
           disabled={loading}
           aria-disabled={!nextEnabled}
         >
-          {loading ? '생성 중...' : nextLabel}
+          {loading ? loadingLabel : nextLabel}
         </button>
       </div>
     </div>
   );
 }
 
-/* ---------- 4단계 전용: 날짜 드롭다운 / 슬라이더 ---------- */
 function DateSelect({ value, onChange, options, placeholder, label, listMax }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -328,7 +331,6 @@ function GaugeSlider({ value, min, onChange, label }) {
   );
 }
 
-/* ---------- 필드 정의 ---------- */
 const POSITION_FIELDS = [
   { key: 'position', label: '소속/직책', placeholder: '담당했던 소속/직책을 입력해 주세요.' },
   { key: 'role', label: '핵심 역할', placeholder: '담당했던 핵심 역할을 입력해 주세요.' },
@@ -344,22 +346,20 @@ const CONTACT_FIELDS = [
   { key: 'role', label: '해당 담당자 역할', placeholder: '해당 담당자분의 역할을 적어 주세요.' },
 ];
 
-const hasText = (arr) => arr.some((v) => v.trim());
+/* 그룹 항목({ key: [''] | 문자열 })을 서버로 보내기 좋은 형태로 정리 */
+const cleanGroups = (items) =>
+  items
+    .map((it) =>
+      Object.fromEntries(Object.entries(it).map(([k, v]) => [k, Array.isArray(v) ? clean(v) : v]))
+    )
+    .filter((it) => Object.values(it).some((v) => (Array.isArray(v) ? v.length : v)));
 
-/* ---------- 페이지 ---------- */
-/**
- * props
- * - organizationId : 현재 조직 ID (필수)
- * - accessToken    : Bearer 토큰 (필수)
- * - currentMemberId : 로그인한 구성원 ID (전임자로 자동 지정)
- * - requestInviteCode : async () => string  (초대 코드 생성 API)
- * - onCreated(project) : 생성 성공(201) 후 호출. data = Project
- */
-export default function HandoverCreate({ organizationId, accessToken, currentMemberId, requestInviteCode, onCreated }) {
-  const [step, setStep] = useState(0); // 0~3
+export default function HandoverCreate({ organizationId, accessToken, currentMemberId, createdProject, onCreated }) {
+  const api = useMemo(() => createHandoverApi(accessToken), [accessToken]);
+
+  const [step, setStep] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
 
-  /* 1. 업무 개요 */
   const [taskNames, setTaskNames] = useState(['']);
   const [cycle, setCycle] = useState('');
   const [importance, setImportance] = useState('');
@@ -374,11 +374,9 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
   const [semester, setSemester] = useState(['']);
   const [contacts, setContacts] = useState([{ name: [''], type: '', role: [''] }]);
 
-  /* 업로드된 이전 인수인계서 (1단계 상단) */
   const prevDocRef = useRef(null);
-  const [prevDoc, setPrevDoc] = useState(null);
+  const [prevDoc, setPrevDoc] = useState(null); // TODO: 전임자 인수인계서 업로드 endpoint가 명세서에 없어 아직 서버로 보내지 않아요.
 
-  /* 2. 파일 첨부 */
   const attachRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [fileError, setFileError] = useState('');
@@ -386,42 +384,59 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
   const [links, setLinks] = useState({ notion: [''], drive: [''], figma: [''], etc: [''] });
   const [checks, setChecks] = useState(CHECKLIST.map(() => false));
 
-  /* 3. AI 답변 */
-  const [questions, setQuestions] = useState([]); // [{ id, text, followUpIndex? }]
-  const [answers, setAnswers] = useState({}); // { [id]: string[] }
-  const [aiError, setAiError] = useState({}); // { [id]: true }
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState({});
+  const [aiError, setAiError] = useState({}); // { _load: msg, [qId]: 'ai' | 'save' }
   const [aiLoading, setAiLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState('');
 
-  /* 4. 마감 설정 */
   const today = seoulToday();
-  const maxDeadline = addDays(today, 31);
+  const maxDeadline = addDays(today, MAX_DEADLINE_DAYS);
   const [closing, setClosing] = useState(INITIAL_CLOSING);
   const [codeLoading, setCodeLoading] = useState(false);
   const [codeError, setCodeError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-
   const deadline = toDeadline(closing);
   const setClose = (patch) => setClosing((c) => ({ ...c, ...patch }));
+
+  /* 서버에 이미 만든 것들 (재시도해도 중복 생성되지 않게 ref에 진행 상황을 보관) */
+  const serverRef = useRef({
+    project: createdProject ?? null,
+    projectId: idOf(createdProject),
+    deadline: createdProject?.deadline ?? '',
+    tasks: [], // [{ taskId, name }]
+    uploaded: new Set(), // 업로드 완료한 File 객체
+    sessions: [], // [{ taskId, sessionId, questions }]
+    confirmed: new Set(), // 확정 완료한 sessionId
+    criteriaSent: '',
+    invitedEmails: new Set(), // 서버에 후임자로 등록 완료한 이메일
+  });
+  const savedRef = useRef({}); // { [qId]: 마지막으로 서버에 저장한 답변 }
+  const analyzedRef = useRef({}); // { [qId]: 마지막으로 AI 추가 질문을 요청한 답변 }
 
   const toggleKeyword = (k) =>
     setKeywords((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
 
-  /* ---------- 검증 ---------- */
   const step1Valid = useMemo(
     () => hasText(taskNames) && !!cycle && !!importance && !!org && !!role,
     [taskNames, cycle, importance, org, role]
   );
   const step2Valid = checks.every(Boolean);
   const answeredCount = questions.filter((q) => hasText(answers[q.id] ?? [''])).length;
-  const baseQuestions = questions.filter((q) => !q.followUpOf);
+  const baseQuestions = questions.filter((q) => !(q.followUpOf ?? q.parentQuestionId));
   const answeredBase = baseQuestions.filter((q) => hasText(answers[q.id] ?? [''])).length;
   const step3Valid = questions.length > 0 && answeredCount === questions.length;
   const deadlineOutOfRange = !!deadline && (deadline < today || deadline > maxDeadline);
   const emailsValid = closing.successors.every((r) => !r.email.trim() || EMAIL_RE.test(r.email.trim()));
-  const step4Valid = !!deadline && !deadlineOutOfRange && emailsValid;
-
-  /* 4단계 파생 값 */
+  const successorsValid = closing.successors.every((r) => {
+    const email = r.email.trim();
+    const name = r.name.trim();
+    if (!email && !name) return true; // 후임자는 선택 사항
+    return EMAIL_RE.test(email) && !!name;
+  });
+  const step4Valid = !!deadline && !deadlineOutOfRange && emailsValid && successorsValid;
   const thisYear = Number(today.slice(0, 4));
   const yearOptions = Array.from({ length: YEAR_COUNT }, (_, i) => String(thisYear + i));
   const monthOptions = Array.from({ length: 12 }, (_, i) => pad(i + 1));
@@ -440,21 +455,11 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
   const setSuccessor = (i, patch) =>
     setClose({ successors: closing.successors.map((r, idx) => (idx === i ? { ...r, ...patch } : r)) });
 
-  const generateCode = async () => {
-    if (codeLoading) return;
-    setCodeLoading(true);
-    setCodeError('');
-    try {
-      const code = await requestInviteCode?.();
-      setClose({ inviteCode: code ?? '' });
-    } catch {
-      setCodeError('초대 코드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
-    } finally {
-      setCodeLoading(false);
-    }
-  };
+  const filledSuccessors = () =>
+    closing.successors
+      .map((r) => ({ email: r.email.trim(), name: r.name.trim() }))
+      .filter((r) => r.email && r.name);
 
-  /* ---------- 파일 처리 ---------- */
   const addFiles = (list) => {
     const next = [];
     let err = '';
@@ -467,7 +472,80 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
     if (next.length) setFiles((prev) => [...prev, ...next]);
   };
 
-  /* ---------- 단계 이동 ---------- */
+  /* ---------- 서버 준비: 프로젝트 → 업무 → 첨부파일 → 인터뷰(AI 질문) ----------
+     AI 질문을 받으려면 projectId / taskId가 필요해서 2단계 → 3단계 넘어갈 때 만들어요.
+     마감일은 4단계에서 정하므로 우선 최대 기간(오늘+31일)으로 만들고, 4단계에서 PATCH로 확정해요. */
+  const ensureProject = async () => {
+    const s = serverRef.current;
+    if (s.projectId) return;
+    if (!currentMemberId) {
+      throw new ApiError(400, '전임자 정보를 확인할 수 없어요. 다시 로그인해 주세요.');
+    }
+    const title = clean(taskNames).join(', ');
+    const project = await api.createProject({
+      organizationId,
+      title,
+      roleName: `${org} ${role}`.trim(),
+      deadline: maxDeadline,
+      predecessorMemberIds: [String(currentMemberId)],
+    });
+    s.project = project;
+    s.projectId = idOf(project);
+    s.deadline = project?.deadline ?? maxDeadline;
+  };
+
+  const buildTaskBody = (name) => ({
+    name,
+    cycle,
+    importance,
+    organization: org,
+    role,
+    keywords,
+    coreRoles: clean(coreRoles),
+    positions: cleanGroups(positions),
+    events: cleanGroups(events),
+    repeatTasks: { weekly: clean(weekly), monthly: clean(monthly), semester: clean(semester) },
+    contacts: cleanGroups(contacts),
+    links: Object.fromEntries(Object.entries(links).map(([k, v]) => [k, clean(v)])),
+  });
+
+  /* 서버에 아직 안 보낸 것(새 업무 / 새 파일 / 인터뷰 미시작)이 있는지 */
+  const needsSync = () => {
+    const s = serverRef.current;
+    return (
+      questions.length === 0 ||
+      clean(taskNames).length > s.tasks.length ||
+      files.some((f) => !s.uploaded.has(f)) ||
+      s.sessions.length < s.tasks.length
+    );
+  };
+
+  /* 이미 보낸 것은 건너뛰고 새로 생긴 것만 보내요. (뒤로 갔다가 업무/파일을 추가한 경우도 반영)
+     참고: 이미 등록된 업무의 수정/삭제, 이미 올린 파일의 삭제는 명세서에 API가 없어 반영하지 않아요. */
+  const prepareInterviews = async () => {
+    const s = serverRef.current;
+    await ensureProject();
+
+    const names = clean(taskNames);
+    for (let i = s.tasks.length; i < names.length; i += 1) {
+      const task = await api.createTask(s.projectId, buildTaskBody(names[i]));
+      s.tasks.push({ taskId: taskIdOf(task), name: names[i] });
+    }
+
+    // 첨부파일은 첫 번째 업무에 붙여요. (업무별로 나누고 싶으면 파일마다 taskId를 고르는 UI가 필요해요)
+    const firstTaskId = s.tasks[0]?.taskId;
+    for (const f of files) {
+      if (s.uploaded.has(f)) continue;
+      await api.uploadAttachment(s.projectId, firstTaskId, f);
+      s.uploaded.add(f);
+    }
+
+    for (let i = s.sessions.length; i < s.tasks.length; i += 1) {
+      s.sessions.push(await api.startInterview(s.projectId, s.tasks[i].taskId));
+    }
+    return s.sessions.flatMap((x) => x.questions);
+  };
+
   const goStep1Next = () => {
     if (!step1Valid) return setShowWarning(true);
     setShowWarning(false);
@@ -477,87 +555,200 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
   const goStep2Next = async () => {
     if (!step2Valid) return;
     setStep(2);
-    if (questions.length === 0) {
-      setAiLoading(true);
-      try {
-        const qs = await requestAiQuestions({ files, links, taskNames });
-        setQuestions(qs);
-        setAnswers(Object.fromEntries(qs.map((q) => [q.id, ['']])));
-      } catch {
-        setAiError({ _load: true });
-      } finally {
-        setAiLoading(false);
-      }
-    }
-  };
+    if (!needsSync()) return;
 
-  /** 답변 입력 후 AI 추가 질문 요청 / 실패 시 다시 시도 */
-  const analyzeAnswer = async (q) => {
-    const followCount = questions.filter((x) => x.followUpOf === q.id).length;
-    if (followCount >= MAX_FOLLOW_UP || !hasText(answers[q.id] ?? [''])) return;
+    setAiLoading(true);
+    setAiError({});
     try {
-      const follow = await requestFollowUp(q, answers[q.id]);
-      setAiError((e) => ({ ...e, [q.id]: false }));
-      if (follow) {
-        const nq = { ...follow, followUpOf: q.id, followUpIndex: followCount + 1 };
-        setQuestions((prev) => {
-          const i = prev.findIndex((x) => x.id === q.id);
-          // 같은 주제의 마지막 추가 질문 바로 뒤에 삽입
-          let end = i;
-          while (prev[end + 1]?.followUpOf === q.id) end += 1;
-          return [...prev.slice(0, end + 1), nq, ...prev.slice(end + 1)];
+      const all = await prepareInterviews();
+
+      // 이미 화면에 있는 질문/답변은 그대로 두고, 새로 받은 것만 붙여요.
+      setQuestions((prev) => {
+        const known = new Set(prev.map((q) => q.id));
+        return [...prev, ...all.filter((q) => !known.has(q.id))];
+      });
+      setAnswers((prev) => {
+        const next = { ...prev };
+        all.forEach((q) => {
+          if (!(q.id in next)) next[q.id] = [q.savedAnswer || ''];
         });
-        setAnswers((a) => ({ ...a, [nq.id]: [''] }));
-      }
-    } catch {
-      setAiError((e) => ({ ...e, [q.id]: true }));
+        return next;
+      });
+      all.forEach((q) => {
+        if (q.savedAnswer && !(q.id in savedRef.current)) savedRef.current[q.id] = q.savedAnswer;
+      });
+    } catch (err) {
+      setAiError({ _load: errorMessage(err) });
+    } finally {
+      setAiLoading(false);
     }
   };
 
-  /* ---------- 최종 제출: POST /api/handovers ---------- */
+  const saveAnswer = async (q) => {
+    const content = joinAnswer(answers[q.id]);
+    if (!content || savedRef.current[q.id] === content) return;
+    await api.saveAnswer(serverRef.current.projectId, q, content);
+    savedRef.current[q.id] = content;
+  };
+
+  const analyzeAnswer = async (q) => {
+    const content = joinAnswer(answers[q.id]);
+    if (!content) return;
+
+    try {
+      await saveAnswer(q);
+    } catch {
+      setAiError((e) => ({ ...e, [q.id]: 'save' }));
+      return;
+    }
+
+    const followCount = questions.filter((x) => x.followUpOf === q.id).length;
+    const skip = !!(q.followUpOf ?? q.parentQuestionId) || followCount >= MAX_FOLLOW_UP || analyzedRef.current[q.id] === content;
+    if (skip) {
+      setAiError((e) => ({ ...e, [q.id]: false }));
+      return;
+    }
+
+    try {
+      const children = await api.requestFollowUps(serverRef.current.projectId, q);
+      analyzedRef.current[q.id] = content;
+      setAiError((e) => ({ ...e, [q.id]: false }));
+
+      const known = new Set(questions.map((x) => x.id));
+      const fresh = children.find((c) => !known.has(c.id));
+      if (!fresh) return;
+
+      const nq = { ...fresh, followUpOf: q.id, followUpIndex: fresh.followUpIndex ?? followCount + 1 };
+      setQuestions((prev) => {
+        const i = prev.findIndex((x) => x.id === q.id);
+        let end = i;
+        while (prev[end + 1]?.followUpOf === q.id) end += 1;
+        return [...prev.slice(0, end + 1), nq, ...prev.slice(end + 1)];
+      });
+      setAnswers((a) => ({ ...a, [nq.id]: [''] }));
+    } catch {
+      setAiError((e) => ({ ...e, [q.id]: 'ai' }));
+    }
+  };
+
+  /* 3단계 → 4단계: 모든 답변 저장 후 인터뷰 답변 확정 */
+  const goStep3Next = async () => {
+    if (!step3Valid || confirming) return;
+    const s = serverRef.current;
+    setConfirming(true);
+    setConfirmError('');
+    try {
+      for (const q of questions) await saveAnswer(q);
+      for (const { sessionId } of s.sessions) {
+        if (s.confirmed.has(sessionId)) continue;
+        await api.confirmInterview(s.projectId, sessionId);
+        s.confirmed.add(sessionId);
+      }
+      setStep(3);
+    } catch (err) {
+      setConfirmError(errorMessage(err));
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  /* 아직 서버에 등록하지 않은 후임자만 등록하고, 받은 참여 코드를 화면에 보여줘요.
+     (이미 등록한 후임자는 다시 보내지 않아 중복 등록/409를 막아요) */
+  const registerSuccessors = async () => {
+    const s = serverRef.current;
+    const pending = filledSuccessors().filter((r) => !s.invitedEmails.has(r.email));
+    if (pending.length === 0) return;
+
+    const issued = await api.createInvitations(s.projectId, pending, (email) => s.invitedEmails.add(email));
+    const code = Object.values(issued).find(Boolean);
+    if (code) setClosing((c) => ({ ...c, inviteCode: c.inviteCode || code }));
+  };
+
+  /* 후임자 등록 + 참여 코드 발급 */
+  const generateCode = async () => {
+    const s = serverRef.current;
+    if (codeLoading || !s.projectId) return;
+    const list = filledSuccessors();
+    if (list.length === 0) {
+      setCodeError('후임자 이름과 이메일을 먼저 입력해 주세요.');
+      return;
+    }
+    if (list.every((r) => s.invitedEmails.has(r.email))) {
+      setCodeError(''); // 이미 모두 등록됨 → 다시 만들지 않아요.
+      return;
+    }
+    setCodeLoading(true);
+    setCodeError('');
+    try {
+      await registerSuccessors();
+    } catch {
+      setCodeError('초대 코드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!step4Valid || submitting) return;
     if (!currentMemberId) {
       setSubmitError('전임자 정보를 확인할 수 없어요. 다시 로그인해 주세요.');
       return;
     }
+
+    const s = serverRef.current;
+    const title = clean(taskNames).join(', ');
+    const roleName = `${org} ${role}`.trim();
+    const buildSnapshot = () => ({
+      title, roleName, deadline, files, links, taskNames, cycle, importance,
+      coreRoles, weekly, monthly, semester, contacts,
+      successors: closing.successors, answeredCount,
+      tasks: s.tasks, sessions: s.sessions,
+      invited: s.invitedEmails.size > 0, inviteCode: closing.inviteCode,
+    });
+
+    /* 부모가 넘겨준(이미 완료된) 프로젝트면 다시 만들지 않고 초안 화면으로만 이동 */
+    if (createdProject) {
+      const changed =
+        title !== createdProject.title ||
+        roleName !== createdProject.roleName ||
+        deadline !== createdProject.deadline;
+      if (changed) {
+        setSubmitError('이미 생성된 인수인계서라 업무명, 조직/역할, 마감일은 바꿀 수 없어요.');
+        return;
+      }
+      setSubmitError('');
+      onCreated?.(createdProject, buildSnapshot());
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError('');
 
-    const body = {
-      organizationId,
-      title: taskNames.map((v) => v.trim()).filter(Boolean).join(', '),
-      roleName: `${org} ${role}`.trim(),
-      deadline, // YYYY-MM-DD
-      predecessorMemberIds: [currentMemberId], // 전임자 1명 이상 필수 (조직 활성 구성원)
-      // 후임자 이름/이메일/역할, 초대 코드, 완성도/퀴즈 커트라인은
-      // POST /api/handovers 명세에 없음 → 후속 API(#14 등)로 별도 전송
-    };
-
     try {
-      const res = await fetch('/api/handovers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
+      await ensureProject(); // 보통은 3단계 진입 때 이미 만들어져 있어요.
 
-      if (res.status === 201) {
-        const { data } = await res.json(); // Project
-        onCreated?.(data);
-        return;
+      if (deadline !== s.deadline) {
+        await api.updateDeadline(s.projectId, deadline);
+        s.deadline = deadline;
       }
-      setSubmitError(API_ERROR_MESSAGE[res.status] ?? '인수인계서를 만들지 못했어요. 잠시 후 다시 시도해 주세요.');
-    } catch {
-      setSubmitError('네트워크 연결을 확인한 뒤 다시 시도해 주세요.');
+
+      const criteriaKey = `${closing.completion}/${closing.quizCutoff}`;
+      if (s.criteriaSent !== criteriaKey) {
+        await api.setCriteria(s.projectId, closing);
+        s.criteriaSent = criteriaKey;
+      }
+
+      // 코드 생성 버튼을 안 눌렀어도, 입력한 후임자는 등록해 둬요. (이미 등록한 사람은 건너뜀)
+      await registerSuccessors();
+
+      onCreated?.({ ...(s.project ?? {}), id: s.projectId, projectId: s.projectId, title, roleName, deadline }, buildSnapshot());
+    } catch (err) {
+      setSubmitError(errorMessage(err));
     } finally {
       setSubmitting(false);
     }
   };
 
-  /* ---------- 렌더 ---------- */
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -566,7 +757,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
       </header>
 
       <div className={styles.body}>
-        {/* 목차 */}
         <aside className={styles.toc} aria-label="목차">
           <span className={styles.tocLabel}>목차</span>
           <ol className={styles.tocList}>
@@ -579,7 +769,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
         </aside>
 
         <div className={styles.main}>
-          {/* ===== 1. 업무 개요 ===== */}
           {step === 0 && (
             <>
               <section className={styles.upload}>
@@ -696,7 +885,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
             </>
           )}
 
-          {/* ===== 2. 파일 첨부 ===== */}
           {step === 1 && (
             <>
               <section className={styles.section}>
@@ -785,7 +973,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
             </>
           )}
 
-          {/* ===== 3. AI 답변 입력 ===== */}
           {step === 2 && (
             <>
               <section className={styles.section}>
@@ -801,14 +988,17 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
 
                   {aiLoading && <p className={styles.hint}>파일을 분석해 질문을 만들고 있어요...</p>}
                   {aiError._load && (
-                    <AiError onRetry={() => { setAiError({}); goStep2Next(); }} />
+                    <AiError
+                      message={`${aiError._load} 입력한 내용은 그대로 남아 있어요.`}
+                      onRetry={() => { setAiError({}); goStep2Next(); }}
+                    />
                   )}
 
                   {questions.map((q) => {
-                    const isFollow = !!q.followUpOf;
-                    const parentId = q.followUpOf ?? q.id;
-                    const number = baseQuestions.findIndex((x) => x.id === parentId) + 1;
-                    const showText = q.text && q.text !== `질문 ${number}`;
+                    const parentId = q.followUpOf ?? q.parentQuestionId;
+                    const isFollow = !!parentId;
+                    const resolvedParentId = parentId ?? q.id;
+                    const number = baseQuestions.findIndex((x) => x.id === resolvedParentId) + 1;
 
                     return (
                       <div key={q.id} className={styles.field}>
@@ -816,9 +1006,9 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                           <span className={extra.badge}>AI 추가 질문 {q.followUpIndex}/{MAX_FOLLOW_UP}</span>
                         )}
                         <label className={extra.qLabel}>Q. 질문 {number}</label>
-                        {showText && <p className={styles.hint}>{q.text}</p>}
+                        {q.text && <p className={styles.hint}>{q.text}</p>}
 
-                        <div onBlur={() => !isFollow && analyzeAnswer(q)}>
+                        <div onBlur={() => analyzeAnswer(q)}>
                           <MultiInput
                             multiline
                             hideAdd={isFollow}
@@ -833,18 +1023,30 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                             같은 주제의 추가 질문은 최대 {MAX_FOLLOW_UP}회까지 제공돼요.
                           </p>
                         )}
-                        {aiError[q.id] && <AiError onRetry={() => analyzeAnswer(q)} />}
+                        {aiError[q.id] === 'ai' && <AiError onRetry={() => analyzeAnswer(q)} />}
+                        {aiError[q.id] === 'save' && (
+                          <AiError
+                            message="답변을 저장하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요."
+                            onRetry={() => analyzeAnswer(q)}
+                          />
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </section>
 
-              <Footer onPrev={() => setStep(1)} onNext={() => step3Valid && setStep(3)} nextEnabled={step3Valid} />
+              <Footer
+                onPrev={() => setStep(1)}
+                onNext={goStep3Next}
+                nextEnabled={step3Valid}
+                loading={confirming}
+                loadingLabel="저장 중..."
+                warning={confirmError}
+              />
             </>
           )}
 
-          {/* ===== 4. 마감 설정 ===== */}
           {step === 3 && (
             <>
               <section className={styles.section}>
@@ -855,7 +1057,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                 />
 
                 <div className={styles.dlWrap}>
-                  {/* 마감일 */}
                   <div className={styles.dlBlock}>
                     <p className={styles.dlLabel}>인수인계 마감일을 지정해 주세요.</p>
                     <div className={styles.dlDateRow}>
@@ -873,7 +1074,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                     )}
                   </div>
 
-                  {/* 후임자 이메일 */}
                   <div className={styles.dlBlock}>
                     <p className={styles.dlLabel}>
                       인수인계서 공유를 위해 후임자의 이메일을 입력해 주세요. <span className={styles.dlOptional}>(선택)</span>
@@ -923,9 +1123,11 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                       </button>
                     </div>
                     {!emailsValid && <p className={styles.dlWarning} role="alert">이메일 형식을 확인해 주세요.</p>}
+                    {emailsValid && !successorsValid && (
+                      <p className={styles.dlWarning} role="alert">후임자는 이름과 이메일을 모두 입력해 주세요.</p>
+                    )}
                   </div>
 
-                  {/* 완성도 */}
                   <div className={styles.dlBlock}>
                     <p className={styles.dlLabel}>해당 인수인계의 최소 완성도 게이지를 설정해 주세요.</p>
                     <GaugeSlider
@@ -939,7 +1141,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                     </p>
                   </div>
 
-                  {/* 퀴즈 커트라인 */}
                   <div className={styles.dlBlock}>
                     <p className={styles.dlLabel}>해당 인수인계의 퀴즈 정답률 커트라인을 설정해 주세요.</p>
                     <GaugeSlider
@@ -953,7 +1154,6 @@ export default function HandoverCreate({ organizationId, accessToken, currentMem
                     </p>
                   </div>
 
-                  {/* 초대 코드 */}
                   <div className={styles.dlInviteRow}>
                     <div className={styles.dlCodeBox} aria-live="polite">{closing.inviteCode}</div>
                     <button type="button" className={styles.dlCodeBtn} onClick={generateCode} disabled={codeLoading}>
