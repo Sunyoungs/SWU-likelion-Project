@@ -4,8 +4,7 @@
 }
 .inner {
   max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 24px;
+  padding-right: 24px; /* 왼쪽 92px는 Layout이 담당 */
 }
 .title {
   margin: 0;

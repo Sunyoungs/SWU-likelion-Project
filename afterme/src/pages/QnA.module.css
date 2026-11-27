@@ -4,8 +4,6 @@
   align-items: flex-start;
   gap: 28px;
   max-width: 967px;
-  /* 사이드바에서 최대 92px(본문 영역 여백 32 + 60), 좁으면 본문이 들어갈 만큼 줄어든다 */
-  margin-left: clamp(0px, calc((100% - 967px) / 2), 60px);
   letter-spacing: -0.25px;
 }
 
