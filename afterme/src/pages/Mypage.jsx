@@ -1,20 +1,17 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Mypage.module.css';
 import userIcon from '../assets/images/icon-user.svg';
 import bellIcon from '../assets/images/icon-bell.svg';
 import toolIcon from '../assets/images/icon-tool.svg';
 import avatarImg from '../assets/images/profile-avatar.svg';
+import { getMe, updateMe } from '../api/user';
+import { clearTokens } from '../api/auth';
 
-// TODO: 서버 연동 시 삭제하고 실제 내 정보 API로 교체 (테스트용 임시 데이터)
-const MOCK_PROFILE = {
-  name: '박서연',
-  email: 'seoyeon.park@likelion.ac.kr',
-  organization: 'LINKER 25기 홍보팀장',
-  role: '전임자',
-};
+const NAME_MAX = 50; // API 명세: 필수, 공백만 불가, 최대 50자
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// 토큰이 없거나 만료된 경우 (API 명세: 401 UNAUTHORIZED / INVALID_ACCESS_TOKEN)
+const isAuthError = (err) => err.response?.status === 401;
 
 const NOTIFICATION_OPTIONS = [
   {
@@ -77,62 +74,93 @@ function Toggle({ checked, onChange, label }) {
 
 export default function Mypage() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(MOCK_PROFILE); // 저장된 값
-  const [name, setName] = useState(MOCK_PROFILE.name); // 입력 중인 값
-  const [email, setEmail] = useState(MOCK_PROFILE.email);
-  const [errors, setErrors] = useState({}); // { name, email } 값이 있으면 에러 표시
+  const [profile, setProfile] = useState(null); // 서버에서 받은 값 { id, email, name, createdAt }
+  const [loadError, setLoadError] = useState('');
+  const [name, setName] = useState(''); // 입력 중인 이름
+  const [nameError, setNameError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
+  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
 
-  const trimmedName = name.trim();
-  const trimmedEmail = email.trim();
-  const isChanged = trimmedName !== profile.name || trimmedEmail !== profile.email;
-  // 이름이나 이메일이 바뀌었을 때만 저장 버튼 활성화 (피그마 Deactivate → activate)
-  const canSave = isChanged && !isSaving;
+  // 로그인이 풀린 경우: 토큰 지우고 로그인 화면으로
+  const goLogin = useCallback(() => {
+    clearTokens();
+    navigate('/login');
+  }, [navigate]);
 
-  const validate = () => {
-    const next = {};
-    if (!trimmedName) next.name = '이름을 입력해 주세요.';
-    if (!trimmedEmail) next.email = '이메일을 입력해 주세요.';
-    else if (!EMAIL_REGEX.test(trimmedEmail)) next.email = '올바른 이메일 형식이 아닙니다.';
-    return next;
-  };
-
-  const handleChange = (setter, key) => (e) => {
-    setter(e.target.value);
-    setErrors((prev) => ({ ...prev, [key]: '' })); // 다시 입력하면 해당 칸 에러 해제
-    setSaveMessage('');
-  };
-
-  // 이메일 칸을 벗어날 때 형식 검사
-  const handleEmailBlur = () => {
-    if (trimmedEmail && !EMAIL_REGEX.test(trimmedEmail)) {
-      setErrors((prev) => ({ ...prev, email: '올바른 이메일 형식이 아닙니다.' }));
+  // 내 정보 불러오기
+  const loadProfile = useCallback(async () => {
+    setLoadError('');
+    try {
+      const me = await getMe();
+      setProfile(me);
+      setName(me.name);
+    } catch (err) {
+      if (isAuthError(err)) {
+        goLogin();
+        return;
+      }
+      setLoadError(
+        err.response?.data?.code === 'USER_NOT_FOUND'
+          ? '회원 정보를 찾을 수 없어요.'
+          : '프로필 정보를 불러오지 못했어요.',
+      );
     }
+  }, [goLogin]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const trimmedName = name.trim();
+  // 이름이 바뀌었을 때만 저장 버튼 활성화 (피그마 Deactivate → activate)
+  const canSave = Boolean(profile) && trimmedName !== profile.name && !isSaving;
+
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+    setNameError(''); // 다시 입력하면 에러 해제
+    setSaveMessage({ type: '', text: '' });
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!canSave) return;
 
-    const nextErrors = validate();
-    setErrors(nextErrors);
-    const firstInvalid = Object.keys(nextErrors)[0];
-    if (firstInvalid) {
-      document.getElementById(`mypage-${firstInvalid}`)?.focus();
+    if (!trimmedName) {
+      setNameError('이름을 입력해 주세요.');
+      document.getElementById('mypage-name')?.focus();
+      return;
+    }
+    if (trimmedName.length > NAME_MAX) {
+      setNameError(`이름은 ${NAME_MAX}자 이하로 입력해 주세요.`);
+      document.getElementById('mypage-name')?.focus();
       return;
     }
 
     setIsSaving(true);
-    // TODO: 여기에 프로필 수정 API 호출
-    //  - 이미 사용 중인 이메일이면 setErrors({ email: '이미 사용 중인 이메일입니다.' })
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setProfile((prev) => ({ ...prev, name: trimmedName, email: trimmedEmail }));
-    setName(trimmedName);
-    setEmail(trimmedEmail);
-    setIsSaving(false);
-    setSaveMessage('저장되었습니다.');
+    try {
+      const updated = await updateMe({ name: trimmedName });
+      setProfile(updated);
+      setName(updated.name);
+      setSaveMessage({ type: 'success', text: '저장되었습니다.' });
+    } catch (err) {
+      if (isAuthError(err)) {
+        goLogin();
+        return;
+      }
+      const errorData = err.response?.data;
+      if (errorData?.code === 'INVALID_INPUT') {
+        const nameMsg = errorData.errors?.find((x) => x.field === 'name')?.message;
+        setNameError(nameMsg ?? errorData.message ?? '이름을 확인해 주세요.');
+        return;
+      }
+      setSaveMessage({
+        type: 'error',
+        text: err.response ? errorData?.message ?? '저장하지 못했어요.' : '서버에 연결할 수 없어요.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggle = (key) => (checked) => {
@@ -164,17 +192,34 @@ export default function Mypage() {
             <div className={styles.profileHead}>
               <img className={styles.avatar} src={avatarImg} alt="" width="123" height="123" />
               <div className={styles.profileSummary}>
-                <p className={styles.profileName}>{profile.name}</p>
-                <div className={styles.tags}>
-                  <div className={styles.tagItem}>
-                    <span className={styles.tag}>소속</span>
-                    <span className={styles.tagValue}>{profile.organization}</span>
+                <p className={styles.profileName}>
+                  {profile?.name ?? (loadError ? '' : '불러오는 중…')}
+                </p>
+                {/* TODO: 소속·역할은 내 정보 API(GET /users/me)에 없음 → 해당 API가 생기면 연결 */}
+                {(profile?.organization || profile?.role) && (
+                  <div className={styles.tags}>
+                    {profile.organization && (
+                      <div className={styles.tagItem}>
+                        <span className={styles.tag}>소속</span>
+                        <span className={styles.tagValue}>{profile.organization}</span>
+                      </div>
+                    )}
+                    {profile.role && (
+                      <div className={styles.tagItem}>
+                        <span className={styles.tag}>역할</span>
+                        <span className={styles.tagValue}>{profile.role}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className={styles.tagItem}>
-                    <span className={styles.tag}>역할</span>
-                    <span className={styles.tagValue}>{profile.role}</span>
-                  </div>
-                </div>
+                )}
+                {loadError && (
+                  <p className={styles.loadError} role="alert">
+                    {loadError}
+                    <button type="button" className={styles.retryButton} onClick={loadProfile}>
+                      다시 시도
+                    </button>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -189,15 +234,16 @@ export default function Mypage() {
                     type="text"
                     className={styles.fieldInput}
                     value={name}
-                    onChange={handleChange(setName, 'name')}
+                    onChange={handleNameChange}
                     autoComplete="name"
-                    aria-invalid={Boolean(errors.name)}
-                    aria-describedby={errors.name ? 'mypage-name-error' : undefined}
-                    disabled={isSaving}
+                    maxLength={NAME_MAX}
+                    aria-invalid={Boolean(nameError)}
+                    aria-describedby={nameError ? 'mypage-name-error' : undefined}
+                    disabled={!profile || isSaving}
                   />
-                  {errors.name && (
+                  {nameError && (
                     <p id="mypage-name-error" className={styles.fieldError} role="alert">
-                      {errors.name}
+                      {nameError}
                     </p>
                   )}
                 </div>
@@ -209,25 +255,20 @@ export default function Mypage() {
                     id="mypage-email"
                     type="email"
                     className={styles.fieldInput}
-                    value={email}
-                    onChange={handleChange(setEmail, 'email')}
-                    onBlur={handleEmailBlur}
-                    autoComplete="email"
-                    aria-invalid={Boolean(errors.email)}
-                    aria-describedby={errors.email ? 'mypage-email-error' : undefined}
-                    disabled={isSaving}
+                    value={profile?.email ?? ''}
+                    readOnly
+                    aria-readonly="true"
+                    title="이메일은 변경할 수 없어요."
                   />
-                  {errors.email && (
-                    <p id="mypage-email-error" className={styles.fieldError} role="alert">
-                      {errors.email}
-                    </p>
-                  )}
                 </div>
               </div>
 
               <div className={styles.saveArea}>
-                <p className={styles.saveMessage} role="status">
-                  {saveMessage}
+                <p
+                  className={`${styles.saveMessage} ${saveMessage.type === 'error' ? styles.saveMessageError : ''}`}
+                  role="status"
+                >
+                  {saveMessage.text}
                 </p>
                 <button type="submit" className={styles.saveButton} disabled={!canSave}>
                   {isSaving ? '저장 중…' : '저장'}
