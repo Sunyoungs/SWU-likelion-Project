@@ -3,8 +3,8 @@
   flex-direction: column;
   gap: 28px;
   max-width: 970px;
-  /* 사이드바에서 최대 96px(본문 영역 여백 32 + 64), 좁으면 본문이 들어갈 만큼 줄어든다 */
-  margin-left: clamp(0px, calc((100% - 970px) / 2), 64px);
+  /* 사이드바에서 최대 92px(본문 영역 여백 32 + 60), 좁으면 본문이 들어갈 만큼 줄어든다 */
+  margin-left: clamp(0px, calc((100% - 970px) / 2), 60px);
   container-type: inline-size; /* 좁은 화면 대응 (요약 카드 줄바꿈) */
 }
 
@@ -53,9 +53,11 @@
   pointer-events: none;
 }
 
+/* 점수·다음 시험일 블록은 위쪽을 맞추고, 구분선은 카드 내용 높이만큼 (Figma 709:4230) */
 .summaryInfo {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  align-self: stretch;
   gap: 136px;
 }
 
@@ -126,8 +128,8 @@
 }
 
 .divider {
+  align-self: stretch;
   width: 2px;
-  height: 102px;
   margin-right: -90px;
   background-color: var(--blue-2);
 }
