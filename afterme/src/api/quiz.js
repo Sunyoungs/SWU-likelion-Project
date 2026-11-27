@@ -13,9 +13,14 @@ export const TYPE_LABEL = { choice: '객관식', short: '단답형' };
 
 // 퀴즈 목록 조회
 // GET /handovers/{projectId}/quizzes
-// 응답: [{ id, title, questionCount, passingScore }]
+// 응답: [{
+//   id, title, questionCount, passingScore, teamName,
+//   attempts: [{ attemptId, round, retake, score, total, passed, submittedAt }],  // 최신 응시가 앞
+//   nextAttempt: { round, retake, availableAt } | null,                           // 더 볼 응시가 없으면 null
+// }]
+// - attempts, nextAttempt, teamName은 명세서에 없는 필드라 백엔드와 맞춰야 한다.
 export function getQuizList(projectId) {
-  return mockResponse(mockQuizList);
+  return mockResponse(mockQuizList.map((quiz) => ({ ...quiz, teamName: mockQuizSet.teamName })));
 }
 
 // 퀴즈 응시 시작. 응시(attempt)를 만들고 attemptId를 발급한다.

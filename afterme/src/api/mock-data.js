@@ -13,9 +13,26 @@ export const mockTopics = {
   5: '업무 개요 · 참고 자료',
 };
 
-// 퀴즈 세트 목록
+// 퀴즈 세트 목록. 응시 기록(attempts)과 다음 응시 정보(nextAttempt)는 서버가 내려준다.
+// - attempts: 최신 응시가 앞. round는 n차, retake는 같은 회차를 다시 본 응시(미달 후 재응시)인지
+// - nextAttempt: 다음에 볼 수 있는 응시. availableAt이 지났으면 지금 응시 가능, 더 볼 응시가 없으면 null
+// 처음 응시 전 화면을 보려면 attempts를 []로, nextAttempt를 { round: 1, retake: false, availableAt: 지금 }으로 바꾼다.
+const QUIZ_DAY_MS = 24 * 60 * 60 * 1000;
+const quizNow = Date.now();
+const quizIso = (days) => new Date(quizNow + days * QUIZ_DAY_MS).toISOString();
 export const mockQuizList = [
-  { id: 1, title: '인수인계 퀴즈 1', questionCount: 10, passingScore: 80 },
+  {
+    id: 1,
+    title: '인수인계 퀴즈 1',
+    questionCount: 10,
+    passingScore: 80,
+    attempts: [
+      { attemptId: 3, round: 1, retake: true, score: 9, total: 10, passed: true, submittedAt: quizIso(0) },
+      { attemptId: 2, round: 1, retake: true, score: 7, total: 10, passed: false, submittedAt: quizIso(-4) },
+      { attemptId: 1, round: 1, retake: false, score: 5, total: 10, passed: false, submittedAt: quizIso(-8) },
+    ],
+    nextAttempt: { round: 2, retake: false, availableAt: quizIso(19) },
+  },
 ];
 
 const OPTIONS = ['보기 1', '보기 2', '보기 3', '보기 4'];

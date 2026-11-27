@@ -10,21 +10,7 @@ import WrongIcon from '../assets/images/Quiz_resultWrong.svg';
 import Illust from '../assets/images/Quiz_resultIllust.png';
 import { getAttemptResult } from '../api/quiz';
 import { useApi } from '../hooks/useApi';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-
-const pad = (n) => String(n).padStart(2, '0');
-// 2026-11-29T16:20:00 → 2026.11.29 16:20
-const formatDateTime = (iso) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-// 2026-12-02T16:20:00 → 2026.12.02 (수)
-const formatDateWithWeekday = (iso) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${WEEKDAYS[d.getDay()]})`;
-};
+import { daysUntil, formatDateTime, formatDateWithWeekday } from '../utils/date';
 
 // 결과 화면은 단답형을 '주관식'으로 표기한다.
 const RESULT_TYPE_LABEL = { choice: '객관식', short: '주관식' };
@@ -54,7 +40,7 @@ function QuizResultView({ result }) {
   }));
 
   // 남은 일수: 서버가 준 재응시 가능 시각까지 (올림). 0 이하면 지금 재응시 가능
-  const retakeInDays = retakeAt ? Math.ceil((new Date(retakeAt) - Date.now()) / DAY_MS) : 0;
+  const retakeInDays = retakeAt ? daysUntil(retakeAt) : 0;
   const canRetake = retakeAt !== null && retakeInDays <= 0;
 
   const total = items.length;
