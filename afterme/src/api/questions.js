@@ -85,17 +85,14 @@ const normalizeQuestion = (raw, names = {}) => ({
 });
 
 // 답변: { replyId, authorId, content, questionRevision, questionContent, createdAt }
-// 서버는 답변을 여러 개 받을 수 있지만 화면은 답변 하나만 보여 준다 → 가장 최근 답변
-const normalizeAnswer = (replies, names = {}) => {
-  const latest = replies[replies.length - 1];
-  if (!latest) return null;
-  return {
-    authorName: latest.authorName ?? names.predecessor ?? '',
-    content: latest.content,
-    createdAt: latest.createdAt,
-    reflection: latest.reflection ?? null, // 인수인계서 반영 안내. 서버에 없음
-  };
-};
+// 한 질문에 답변이 여러 개 달릴 수 있다. 서버가 등록순으로 준다.
+const normalizeAnswer = (reply, names = {}) => ({
+  replyId: reply.replyId,
+  authorName: reply.authorName ?? names.predecessor ?? '',
+  content: reply.content,
+  createdAt: reply.createdAt,
+  reflection: reply.reflection ?? null, // 인수인계서 반영 안내. 서버에 없음
+});
 
 const sortQuestions = (list, sort) =>
   [...list].sort((a, b) =>
@@ -145,7 +142,7 @@ export async function getQuestionList(projectId, { sort = 'latest' } = {}) {
 // 반환: { threadId, status, title, content, topicId, topicName, authorName, createdAt, revision,
 //        attachments: [{ id, name, size, contentType, url }],
 //        document: { topicId, topicName, excerpt } | null,        // 질문한 인수인계서 원문
-//        answer: { authorName, content, createdAt, reflection: { version, topicId, topicName } | null } | null }
+//        answers: [{ replyId, authorName, content, createdAt, reflection: { version, topicId, topicName } | null }] } // 등록순
 export async function getQuestionDetail(projectId, threadId) {
   if (USE_MOCK) {
     const question = findQuestion(threadId);
@@ -168,7 +165,7 @@ export async function getQuestionDetail(projectId, threadId) {
     document: raw.question.sectionExcerpt
       ? { topicId: question.topicId, topicName: question.topicName, excerpt: raw.question.sectionExcerpt }
       : null,
-    answer: normalizeAnswer(raw.replies ?? [], names),
+    answers: (raw.replies ?? []).map((reply) => normalizeAnswer(reply, names)),
   };
 }
 
@@ -191,7 +188,7 @@ export async function createQuestion(projectId, { topicId, title, content, files
       authorName: mockSuccessorName,
       createdAt: new Date().toISOString(),
       attachments: toMockAttachments(files),
-      answer: null,
+      answers: [],
     });
     return { threadId };
   }
@@ -221,14 +218,14 @@ export async function updateQuestion(projectId, threadId, { revision, topicId, t
 
 // ---------- 답변 (전임자) ----------
 
-// 질문에 답변 등록 → 서버가 질문을 해결됨으로 바꾼다
+// 질문에 답변 등록 (이미 답변이 있어도 추가로 달 수 있다) → 서버가 질문을 해결됨으로 바꾼다
 // POST /handovers/{projectId}/questions/{threadId}/replies
 // 요청: { questionRevision, content } (questionRevision: 답변하는 질문의 버전. 그 사이 질문이 수정됐으면 409)
 export async function createReply(projectId, threadId, content, questionRevision) {
   if (USE_MOCK) {
     const question = findQuestion(threadId);
     if (!question) return notFound();
-    question.answer = { ...createMockAnswer(question.topicId, Date.now()), content };
+    question.answers = [...question.answers, { ...createMockAnswer(question.topicId, Date.now()), content }];
     question.status = 'resolved';
     return null;
   }
@@ -237,9 +234,10 @@ export async function createReply(projectId, threadId, content, questionRevision
 }
 
 // 답변 수정. 백엔드에 API가 없어 mock으로만 동작한다. (REPLY_EDIT_SUPPORTED)
-export function updateReply(projectId, threadId, content) {
+export function updateReply(projectId, threadId, replyId, content) {
   const question = findQuestion(threadId);
-  if (!question?.answer) return notFound();
-  question.answer = { ...question.answer, content };
+  const reply = question?.answers.find((a) => a.replyId === replyId);
+  if (!reply) return notFound();
+  question.answers = question.answers.map((a) => (a.replyId === replyId ? { ...a, content } : a));
   return mockResponse(null);
 }

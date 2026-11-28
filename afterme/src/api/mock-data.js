@@ -138,7 +138,9 @@ export const mockSuccessorName = '홍길동';
 const HOUR_MS = 60 * 60 * 1000;
 const qnaNow = Date.now();
 const iso = (ms) => new Date(ms).toISOString();
+let nextReplyId = 1;
 const mockAnswer = (topicId, ms) => ({
+  replyId: nextReplyId++,
   authorName: mockPredecessorName,
   content: '답변 예시',
   createdAt: iso(ms),
@@ -155,7 +157,7 @@ const mockQuestion = (threadId, topicId, ms, answered) => ({
   authorName: mockSuccessorName,
   createdAt: iso(ms),
   attachments: [],
-  answer: answered ? mockAnswer(topicId, ms + HOUR_MS) : null,
+  answers: answered ? [mockAnswer(topicId, ms + HOUR_MS)] : [], // 답변은 여러 개일 수 있다 (등록순)
 });
 
 export const mockQuestionList = [
