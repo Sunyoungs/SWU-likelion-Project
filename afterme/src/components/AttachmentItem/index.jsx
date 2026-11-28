@@ -9,8 +9,9 @@ export const formatFileSize = (bytes) =>
 
 // 첨부 파일 칩
 // - href가 있으면 누를 때 새 탭에서 열린다 (이미지·PDF 등은 브라우저가 열고, 나머지는 내려받기)
+// - onOpen이 있으면 누를 때 onOpen을 부른다 (토큰이 필요한 서버 파일은 직접 받아서 연다)
 // - onRemove가 있으면 오른쪽에 삭제(✕) 버튼을 보여준다 (등록·수정 화면)
-const AttachmentItem = ({ name, size, href, onRemove, className = '' }) => {
+const AttachmentItem = ({ name, size, href, onOpen, onRemove, className = '' }) => {
   const info = (
     <>
       <span className={styles.icon}>
@@ -23,7 +24,11 @@ const AttachmentItem = ({ name, size, href, onRemove, className = '' }) => {
 
   return (
     <div className={`${styles.item} ${className}`}>
-      {href ? (
+      {onOpen ? (
+        <button type="button" className={`${styles.info} ${styles.link} ${styles.openButton}`} onClick={onOpen}>
+          {info}
+        </button>
+      ) : href ? (
         <a className={`${styles.info} ${styles.link}`} href={href} target="_blank" rel="noopener noreferrer">
           {info}
         </a>
