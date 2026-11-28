@@ -19,7 +19,6 @@ import {
   openAttachment,
   topicLabel,
   ROLE_LABEL,
-  REPLY_EDIT_SUPPORTED,
 } from '../api/questions';
 import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
@@ -100,21 +99,19 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
 
   const canSubmit = answer.trim().length > 0 && !submitting;
 
-  const submit = async (request) => {
+  // request: 다듬은 답변 내용을 받아 서버에 보내는 함수. messages: 오류 종류별 안내 문구
+  const submit = async (request, messages) => {
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
-      await request(projectId, threadId, answer.trim(), detail.revision);
+      await request(answer.trim());
       setAnswer('');
       setEditingAnswer(false);
       onChanged();
     } catch (err) {
       // 실패해도 쓴 답변은 그대로 두고, 버튼 위에 안내만 띄운다
-      setSubmitError(
-        submitErrorMessage(err, { conflict: '그 사이 질문이 수정됐어요. 새로고침한 뒤 다시 등록해 주세요.' }),
-      );
+      setSubmitError(submitErrorMessage(err, messages));
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +148,12 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
           text="답변 등록"
           variant={canSubmit ? 'primary' : 'deactivate'}
           className={styles.footerButton}
-          onClick={() => submit(createReply)}
+          onClick={() =>
+            // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
+            submit((content) => createReply(projectId, threadId, content, detail.revision), {
+              conflict: '그 사이 질문이 수정됐어요. 새로고침한 뒤 다시 등록해 주세요.',
+            })
+          }
         />
       );
     } else if (editingAnswer) {
@@ -162,11 +164,17 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
             text="수정 완료"
             variant={canSubmit ? 'primary' : 'deactivate'}
             className={styles.footerButton}
-            onClick={() => submit(updateReply)}
+            onClick={() =>
+              submit((content) => updateReply(projectId, threadId, detail.answer.replyId, content), {
+                forbidden: '본인이 작성한 답변만 수정할 수 있어요.',
+                notFound: '답변을 찾을 수 없어요. 새로고침한 뒤 다시 확인해 주세요.',
+              })
+            }
           />
         </div>
       );
-    } else if (REPLY_EDIT_SUPPORTED) {
+    } else {
+      // 답변을 쓴 전임자 본인만 수정할 수 있다. 다른 전임자가 누르면 서버가 403을 주고 안내가 뜬다.
       footer = <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />;
     }
   }

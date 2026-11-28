@@ -17,9 +17,6 @@ import {
 // 지금 백엔드 Q&A는 인수인계서(문서) 모듈이 연결돼야 질문을 등록·조회할 수 있다. 연결되면 false로 바꾼다.
 export const USE_MOCK = true;
 
-// 답변 수정 API가 백엔드에 없다. 없는 동안 실제 서버 모드에서는 '답변 수정' 버튼을 숨긴다.
-export const REPLY_EDIT_SUPPORTED = USE_MOCK;
-
 // 질문 수정 API가 관련 항목 변경을 받지 않는다. 실제 서버 모드에서는 수정 화면의 관련 항목을 바꿀 수 없게 한다.
 export const TOPIC_EDIT_SUPPORTED = USE_MOCK;
 
@@ -100,12 +97,14 @@ const normalizeAttachment = (a) => ({
   url: a.downloadUrl,
 });
 
-// 답변: { replyId, authorId, content, questionRevision, questionContent, createdAt }
+// 답변: { replyId, authorId, authorName, content, questionRevision, questionContent, createdAt }
 // 서버는 답변을 여러 개 받을 수 있지만 화면은 답변 하나만 보여 준다 → 가장 최근 답변
 const normalizeAnswer = (replies, names = {}) => {
   const latest = replies[replies.length - 1];
   if (!latest) return null;
   return {
+    replyId: latest.replyId, // 답변 수정 요청에 쓴다
+    authorId: latest.authorId,
     authorName: latest.authorName ?? names.predecessor ?? '',
     content: latest.content,
     createdAt: latest.createdAt,
@@ -335,10 +334,21 @@ export async function createReply(projectId, threadId, content, questionRevision
   return null;
 }
 
-// 답변 수정. 백엔드에 API가 없어 mock으로만 동작한다. (REPLY_EDIT_SUPPORTED)
-export function updateReply(projectId, threadId, content) {
-  const question = findQuestion(threadId);
-  if (!question?.answer) return notFound();
-  question.answer = { ...question.answer, content };
-  return mockResponse(null);
+// 답변 수정. 답변을 쓴 전임자 본인만 수정할 수 있다 (아니면 서버가 403).
+// 해결 상태와 답변 수는 그대로 유지된다.
+// PATCH /handovers/{projectId}/questions/{threadId}/replies/{replyId}
+// 요청: { content }
+export async function updateReply(projectId, threadId, replyId, content) {
+  if (USE_MOCK) {
+    const question = findQuestion(threadId);
+    if (!question?.answer) return notFound();
+    question.answer = { ...question.answer, content };
+    return mockResponse(null);
+  }
+  await axiosClient.patch(
+    `/handovers/${projectId}/questions/${threadId}/replies/${replyId}`,
+    { content },
+    { skipErrorAlert: true },
+  );
+  return null;
 }

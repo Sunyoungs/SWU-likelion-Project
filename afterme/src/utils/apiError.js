@@ -14,9 +14,9 @@ export function errorKind(error) {
 }
 
 // 제출(등록·수정) 버튼 옆에 보여 줄 문구.
-// conflict: 화면마다 409의 뜻이 달라 호출하는 쪽에서 넘긴다.
+// conflict·forbidden·notFound: 화면마다 409·403·404의 뜻이 달라 호출하는 쪽에서 넘길 수 있다.
 // 다시 로그인해야 하는 경우는 Layout이 공통 안내를 띄우므로 null을 돌려준다.
-export function submitErrorMessage(error, { conflict } = {}) {
+export function submitErrorMessage(error, { conflict, forbidden, notFound } = {}) {
   switch (errorKind(error)) {
     case 'auth':
       return null;
@@ -25,9 +25,9 @@ export function submitErrorMessage(error, { conflict } = {}) {
     case 'conflict':
       return conflict ?? '지금은 처리할 수 없어요. 새로고침한 뒤 다시 시도해 주세요.';
     case 'forbidden':
-      return '이 작업을 할 권한이 없어요.';
+      return forbidden ?? '이 작업을 할 권한이 없어요.';
     case 'notFound':
-      return '대상을 찾을 수 없어요. 목록에서 다시 확인해 주세요.';
+      return notFound ?? '대상을 찾을 수 없어요. 목록에서 다시 확인해 주세요.';
     case 'invalid':
       return error.response.data?.message ?? '입력한 내용을 다시 확인해 주세요.';
     default:
