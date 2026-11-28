@@ -1,15 +1,33 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styles from './Login.module.css';
 import airplaneImg from '../assets/images/login-airplane.svg';
 import mainlogo from '../assets/images/Main_black_logo.svg';
+import { login } from '../api/auth';
 
-// TODO: 서버 연동 시 삭제하고 실제 로그인 API로 교체 (테스트용 임시 계정)
-const MOCK_ACCOUNT = { email: 'seoyeon.park@likelion.ac.kr', password: 'password1!' };
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// 서버 에러 코드 → 화면 문구 (API 명세 POST /api/auth/login)
+function getLoginErrorMessage(err) {
+  const errorData = err.response?.data;
+  if (!err.response) return '서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.';
+  switch (errorData?.code) {
+    case 'INVALID_CREDENTIALS':
+      return '이메일 및 비밀번호가 일치하지 않습니다.';
+    case 'ACCOUNT_LOCKED':
+      return '로그인 시도가 너무 많아 계정이 잠겼어요. 잠시 후 다시 시도해 주세요.';
+    case 'INVALID_INPUT':
+      return errorData.errors?.[0]?.message ?? errorData.message ?? '입력값을 확인해 주세요.';
+    default:
+      return errorData?.message ?? '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.';
+  }
+}
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  // 회원가입 직후라면 가입한 이메일을 미리 채워 둠
+  const [email, setEmail] = useState(location.state?.signupEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(''); // 값이 있으면 에러 상태: 핑크 테두리 + 메시지
   const [isLoading, setIsLoading] = useState(false);
@@ -23,22 +41,25 @@ export default function Login() {
     e.preventDefault();
     if (isLoading) return;
 
-    if (!email.trim() || !password) {
+    // API 명세: 이메일 필수·형식 / 비밀번호 필수·공백만 입력 불가
+    if (!email.trim() || !password.trim()) {
       setError('이메일과 비밀번호를 입력해 주세요.');
+      return;
+    }
+    if (!EMAIL_REGEX.test(email.trim())) {
+      setError('올바른 이메일 형식이 아닙니다.');
       return;
     }
 
     setIsLoading(true);
-    // TODO: 여기에 로그인 API 호출
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const matched = email.trim() === MOCK_ACCOUNT.email && password === MOCK_ACCOUNT.password;
-    setIsLoading(false);
-
-    if (!matched) {
-      setError('이메일 및 비밀번호가 일치하지 않습니다.');
-      return;
+    try {
+      await login({ email: email.trim(), password });
+      navigate('/handovers'); // IA: 인수인계 > 인수인계 목록 (실제 경로에 맞게 수정)
+    } catch (err) {
+      setError(getLoginErrorMessage(err));
+    } finally {
+      setIsLoading(false);
     }
-    navigate('/handovers'); // IA: 인수인계 > 인수인계 목록 (실제 경로에 맞게 수정)
   };
 
   const hasError = Boolean(error);
