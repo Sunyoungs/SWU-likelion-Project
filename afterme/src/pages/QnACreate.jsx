@@ -87,7 +87,7 @@ function QnAForm({ me, topics, question }) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    const body = { topicId, title: title.trim(), content: content.trim(), files, attachments };
+    const body = { topicId, title: title.trim(), content: content.trim(), files, attachments, revision: question?.revision };
     try {
       if (isEdit) {
         await updateQuestion(projectId, question.threadId, body);

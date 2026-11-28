@@ -5,7 +5,7 @@ import QnAStatus from '../components/QnAStatus';
 import styles from './QnA.module.css';
 import SortArrow from '../assets/images/QnA_sortArrow.svg';
 import EmptyPlane from '../assets/images/QnA_emptyPlane.svg';
-import { getMyRole, getQuestionList, SORT_OPTIONS, STATUS_LABEL, formatRelativeTime } from '../api/questions';
+import { getMyRole, getQuestionList, SORT_OPTIONS, STATUS_LABEL, formatRelativeTime, topicLabel } from '../api/questions';
 import { useApi } from '../hooks/useApi';
 
 // 역할별 문구. 전임자는 답변할 질문을, 후임자는 내가 올린 질문을 본다.
@@ -113,7 +113,7 @@ function QnA() {
                 <span className={styles.questionTitle}>{q.title}</span>
                 <span className={styles.questionContent}>{q.content}</span>
               </span>
-              <span role="cell" className={styles.topic}>{q.topicId}. {q.topicName}</span>
+              <span role="cell" className={styles.topic}>{topicLabel(q)}</span>
               <span role="cell" className={styles.author}>{q.authorName}</span>
               <span role="cell" className={`${styles.author} ${styles.dateCell}`}>{formatRelativeTime(q.createdAt)}</span>
             </div>
