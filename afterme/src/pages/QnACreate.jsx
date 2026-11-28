@@ -13,12 +13,27 @@ import {
   getQuestionDetail,
   createQuestion,
   updateQuestion,
+  openAttachment,
+  topicLabel,
   CONTENT_MAX_LENGTH,
+  TOPIC_EDIT_SUPPORTED,
 } from '../api/questions';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
+import { submitErrorMessage } from '../utils/apiError';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.gif';
+// 서버가 받는 형식 (끌어다 놓은 파일은 accept가 걸러 주지 않아서 직접 확인한다)
+const ALLOWED_TYPE = /\.(pdf|png|jpe?g|gif)$/i;
+
+// 첨부 일부를 처리하지 못했을 때 상세 화면에 보여 줄 안내
+const attachmentNotice = ({ failedFiles = [], failedRemovals = [] }) => {
+  const parts = [];
+  if (failedFiles.length) parts.push(`첨부파일을 올리지 못했어요: ${failedFiles.join(', ')}`);
+  if (failedRemovals.length) parts.push(`첨부파일을 삭제하지 못했어요: ${failedRemovals.join(', ')}`);
+  return parts.length ? `질문은 저장됐어요. ${parts.join(' / ')}. 질문 수정에서 다시 시도해 주세요.` : null;
+};
 const CONTENT_PLACEHOLDER =
   '질문 내용을 구체적으로 입력하세요.\n관련 업무 항목이나 상황을 함께 적으면 전임자가 더 정확하게 답변할 수 있습니다.';
 
@@ -27,16 +42,26 @@ function QnACreate() {
   const { projectId, threadId } = useParams();
   const isEdit = Boolean(threadId);
 
-  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
-  const { data: topics } = useApi(() => getTopics(projectId), [projectId]);
-  const { data: question, error } = useApi(
+  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const topics$ = useApi(() => getTopics(projectId), [projectId]);
+  const question$ = useApi(
     () => (isEdit ? getQuestionDetail(projectId, threadId) : Promise.resolve(null)),
     [projectId, threadId],
   );
 
-  if (error) return <p>질문을 불러오지 못했어요.</p>;
-  if (!me || !topics || (isEdit && !question)) return null;
-  return <QnAForm key={threadId ?? 'new'} me={me} topics={topics} question={question} />;
+  const requests = [me$, topics$, question$];
+  const failed = requests.find((r) => r.error);
+  if (failed || requests.some((r) => r.loading)) {
+    return (
+      <LoadState
+        loading={!failed}
+        error={failed?.error}
+        what={isEdit ? '질문' : '질문 작성 정보'}
+        onRetry={() => requests.filter((r) => r.error).forEach((r) => r.reload())}
+      />
+    );
+  }
+  return <QnAForm key={threadId ?? 'new'} me={me$.data} topics={topics$.data} question={question$.data} />;
 }
 
 function QnAForm({ me, topics, question }) {
@@ -54,6 +79,7 @@ function QnAForm({ me, topics, question }) {
   const [dragging, setDragging] = useState(false);
   const [topicOpen, setTopicOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const topicRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -69,13 +95,22 @@ function QnAForm({ me, topics, question }) {
   }, [topicOpen]);
 
   const selectedTopic = topics.find((t) => t.topicId === topicId);
+  // 실제 서버는 질문 수정 때 관련 항목 변경을 받지 않는다
+  const topicLocked = isEdit && !TOPIC_EDIT_SUPPORTED;
   const canSubmit = topicId !== null && title.trim() && content.trim() && !submitting;
 
   const addFiles = (fileList) => {
     const picked = Array.from(fileList);
-    const tooLarge = picked.filter((f) => f.size > MAX_FILE_SIZE);
-    setFileError(tooLarge.length ? '10MB를 넘는 파일은 첨부할 수 없어요.' : '');
-    setFiles((prev) => [...prev, ...picked.filter((f) => f.size <= MAX_FILE_SIZE)]);
+    const wrongType = picked.some((f) => !ALLOWED_TYPE.test(f.name));
+    const tooLarge = picked.some((f) => f.size > MAX_FILE_SIZE);
+    setFileError(
+      wrongType
+        ? 'PDF, PNG, JPG, GIF 파일만 첨부할 수 있어요.'
+        : tooLarge
+          ? '10MB를 넘는 파일은 첨부할 수 없어요.'
+          : '',
+    );
+    setFiles((prev) => [...prev, ...picked.filter((f) => ALLOWED_TYPE.test(f.name) && f.size <= MAX_FILE_SIZE)]);
   };
 
   const handleDrop = (e) => {
@@ -87,15 +122,34 @@ function QnAForm({ me, topics, question }) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    const body = { topicId, title: title.trim(), content: content.trim(), files, attachments, revision: question?.revision };
+    setSubmitError(null);
+    const body = {
+      topicId,
+      title: title.trim(),
+      content: content.trim(),
+      files,
+      attachments,
+      originalAttachments: question?.attachments ?? [],
+      revision: question?.revision,
+    };
     try {
+      // 질문이 저장된 뒤 첨부 일부만 실패하면, 같은 질문이 또 등록되지 않도록 상세 화면으로 넘어가 안내한다
       if (isEdit) {
-        await updateQuestion(projectId, question.threadId, body);
-        navigate(`/handovers/${projectId}/questions/${question.threadId}`);
+        const result = await updateQuestion(projectId, question.threadId, body);
+        navigate(`/handovers/${projectId}/questions/${question.threadId}`, { state: { notice: attachmentNotice(result) } });
       } else {
-        const { threadId } = await createQuestion(projectId, body);
-        navigate(`/handovers/${projectId}/questions/${threadId}`);
+        const { threadId, ...result } = await createQuestion(projectId, body);
+        navigate(`/handovers/${projectId}/questions/${threadId}`, { state: { notice: attachmentNotice(result) } });
       }
+    } catch (err) {
+      // 실패해도 쓴 내용은 그대로 두고, 버튼 위에 안내만 띄운다
+      setSubmitError(
+        submitErrorMessage(err, {
+          conflict: isEdit
+            ? '그 사이 질문이 바뀌었어요. 새로고침한 뒤 다시 수정해 주세요.'
+            : '지금은 이 항목에 질문을 등록할 수 없어요. 잠시 후 다시 시도해 주세요.',
+        }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -107,7 +161,7 @@ function QnAForm({ me, topics, question }) {
       key: `a-${a.id ?? i}`,
       name: a.name,
       size: a.size,
-      href: a.url,
+      open: a.url && (() => openAttachment(a).catch(() => setFileError(`'${a.name}' 파일을 열지 못했어요.`))),
       remove: () => setAttachments((prev) => prev.filter((_, j) => j !== i)),
     })),
     ...files.map((f, i) => ({
@@ -137,12 +191,14 @@ function QnAForm({ me, topics, question }) {
                 type="button"
                 className={`${styles.selectButton} ${topicOpen ? styles.selectButtonOpen : ''}`}
                 onClick={() => setTopicOpen((open) => !open)}
+                disabled={topicLocked}
+                aria-describedby={topicLocked ? 'qna-topic-locked' : undefined}
                 aria-haspopup="listbox"
                 aria-expanded={topicOpen}
                 aria-labelledby="qna-topic-label"
               >
                 <span className={selectedTopic ? styles.selectValue : styles.placeholder}>
-                  {selectedTopic ? `${selectedTopic.topicId}. ${selectedTopic.topicName}` : '관련 항목'}
+                  {selectedTopic ? topicLabel(selectedTopic) : isEdit ? topicLabel(question) : '관련 항목'}
                 </span>
                 <img src={ArrowIcon} alt="" className={`${styles.selectArrow} ${topicOpen ? styles.selectArrowOpen : ''}`} />
               </button>
@@ -159,12 +215,17 @@ function QnAForm({ me, topics, question }) {
                         setTopicOpen(false);
                       }}
                     >
-                      {t.topicId}. {t.topicName}
+                      {topicLabel(t)}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+            {topicLocked && (
+              <p id="qna-topic-locked" className={styles.hint}>
+                질문을 수정할 때는 관련 항목을 바꿀 수 없어요.
+              </p>
+            )}
           </div>
 
           {/* 질문 제목 */}
@@ -234,13 +295,18 @@ function QnAForm({ me, topics, question }) {
               />
 
               {fileItems.map((item) => (
-                <AttachmentItem key={item.key} name={item.name} size={item.size} href={item.href} onRemove={item.remove} />
+                <AttachmentItem key={item.key} name={item.name} size={item.size} onOpen={item.open} onRemove={item.remove} />
               ))}
             </div>
           </div>
         </div>
 
         <div className={styles.footer}>
+          {submitError && (
+            <p className={styles.submitError} role="alert">
+              {submitError}
+            </p>
+          )}
           <Button
             text={isEdit ? '질문 수정' : '질문 등록'}
             variant="primary"

@@ -54,3 +54,13 @@
   border: none;
   background: none;
 }
+
+/* onOpen으로 여는 칩: 링크와 같은 모양의 버튼 */
+.openButton {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}

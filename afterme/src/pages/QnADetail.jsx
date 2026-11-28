@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import QnAStatus from '../components/QnAStatus';
 import AttachmentItem from '../components/AttachmentItem';
@@ -16,11 +16,13 @@ import {
   createReply,
   updateReply,
   formatRelativeTime,
+  openAttachment,
   topicLabel,
   ROLE_LABEL,
-  REPLY_EDIT_SUPPORTED,
 } from '../api/questions';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
+import { submitErrorMessage } from '../utils/apiError';
 
 const ANSWER_PLACEHOLDER =
   '답변을 구체적으로 입력하세요.\n관련 업무 항목이나 상황을 함께 적으면 후임자가 더 명확하게 이해할 수 있습니다.';
@@ -47,14 +49,15 @@ function QnADetail() {
   // 답변 등록 · 수정 후 상세와 목록을 다시 불러오기 위한 키
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
+  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const me = me$.data;
   const { data: questions } = useApi(() => getQuestionList(projectId), [projectId, reloadKey]);
-  const { data: detail, error } = useApi(
+  const { data: detail, loading, error, reload } = useApi(
     () => getQuestionDetail(projectId, threadId),
     [projectId, threadId, reloadKey],
   );
 
-  if (!me) return null;
+  if (!me) return <LoadState loading={me$.loading} error={me$.error} what="질문" onRetry={me$.reload} />;
   return (
     <QnADetailView
       // 다른 질문으로 이동하면 입력 상태를 초기화한다
@@ -62,13 +65,15 @@ function QnADetail() {
       me={me}
       questions={questions ?? []}
       detail={detail}
+      loading={loading}
       error={error}
+      onRetry={reload}
       onChanged={() => setReloadKey((k) => k + 1)}
     />
   );
 }
 
-function QnADetailView({ me, questions, detail, error, onChanged }) {
+function QnADetailView({ me, questions, detail, loading, error, onRetry, onChanged }) {
   const navigate = useNavigate();
   const { projectId, threadId } = useParams();
   const isPredecessor = me.role === 'predecessor';
@@ -76,18 +81,37 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
   const [answer, setAnswer] = useState('');
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [fileError, setFileError] = useState(null);
+  // 질문 등록·수정 화면에서 첨부 일부를 처리하지 못했을 때 넘겨주는 안내
+  const notice = useLocation().state?.notice ?? null;
+
+  const open = async (file) => {
+    setFileError(null);
+    try {
+      await openAttachment(file);
+    } catch (err) {
+      // 다시 로그인해야 하는 경우는 공통 로그인 안내 모달이 뜨므로 따로 문구를 띄우지 않는다
+      const message = submitErrorMessage(err);
+      setFileError(message && `'${file.name}' 파일을 열지 못했어요. 잠시 후 다시 시도해 주세요.`);
+    }
+  };
 
   const canSubmit = answer.trim().length > 0 && !submitting;
 
-  const submit = async (request) => {
+  // request: 다듬은 답변 내용을 받아 서버에 보내는 함수. messages: 오류 종류별 안내 문구
+  const submit = async (request, messages) => {
     if (!canSubmit) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
-      // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
-      await request(projectId, threadId, answer.trim(), detail.revision);
+      await request(answer.trim());
       setAnswer('');
       setEditingAnswer(false);
       onChanged();
+    } catch (err) {
+      // 실패해도 쓴 답변은 그대로 두고, 버튼 위에 안내만 띄운다
+      setSubmitError(submitErrorMessage(err, messages));
     } finally {
       setSubmitting(false);
     }
@@ -124,7 +148,12 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
           text="답변 등록"
           variant={canSubmit ? 'primary' : 'deactivate'}
           className={styles.footerButton}
-          onClick={() => submit(createReply)}
+          onClick={() =>
+            // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
+            submit((content) => createReply(projectId, threadId, content, detail.revision), {
+              conflict: '그 사이 질문이 수정됐어요. 새로고침한 뒤 다시 등록해 주세요.',
+            })
+          }
         />
       );
     } else if (editingAnswer) {
@@ -135,11 +164,17 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
             text="수정 완료"
             variant={canSubmit ? 'primary' : 'deactivate'}
             className={styles.footerButton}
-            onClick={() => submit(updateReply)}
+            onClick={() =>
+              submit((content) => updateReply(projectId, threadId, detail.answer.replyId, content), {
+                forbidden: '본인이 작성한 답변만 수정할 수 있어요.',
+                notFound: '답변을 찾을 수 없어요. 새로고침한 뒤 다시 확인해 주세요.',
+              })
+            }
           />
         </div>
       );
-    } else if (REPLY_EDIT_SUPPORTED) {
+    } else {
+      // 답변을 쓴 전임자 본인만 수정할 수 있다. 다른 전임자가 누르면 서버가 403을 주고 안내가 뜬다.
       footer = <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />;
     }
   }
@@ -187,7 +222,7 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
 
         {/* 오른쪽: 질문 상세 */}
         <section className={styles.main}>
-          {error && <p className={styles.sideLabel}>질문을 불러오지 못했어요.</p>}
+          {(loading || error) && <LoadState loading={loading} error={error} what="질문" onRetry={onRetry} />}
           {detail && (
             <>
               <div className={styles.content}>
@@ -199,6 +234,12 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                     </div>
                     <p className={styles.meta}>관련 항목 · {topicLabel(detail)}</p>
                   </div>
+
+                  {notice && (
+                    <p className={styles.fileError} role="status">
+                      {notice}
+                    </p>
+                  )}
 
                   <div className={styles.thread}>
                     {/* 질문자가 참조한 인수인계서 원문 (서버가 주지 않으면 숨긴다) */}
@@ -214,9 +255,14 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                       {detail.attachments?.length > 0 && (
                         <div className={styles.attachments}>
                           {detail.attachments.map((file) => (
-                            <AttachmentItem key={file.id} name={file.name} size={file.size} href={file.url} />
+                            <AttachmentItem key={file.id} name={file.name} size={file.size} onOpen={file.url ? () => open(file) : undefined} />
                           ))}
                         </div>
+                      )}
+                      {fileError && (
+                        <p className={styles.fileError} role="alert">
+                          {fileError}
+                        </p>
                       )}
                     </ThreadMessage>
 
@@ -269,6 +315,11 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                 )}
               </div>
 
+              {submitError && (
+                <p className={styles.submitError} role="alert">
+                  {submitError}
+                </p>
+              )}
               {footer}
             </>
           )}

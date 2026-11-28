@@ -337,3 +337,20 @@
   display: flex;
   gap: 12px;
 }
+
+/* 제출 실패 안내 (버튼 위) */
+.submitError {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: right;
+  color: var(--pink-6);
+}
+
+/* 첨부 열기 실패·첨부 일부 처리 실패 안내 */
+.fileError {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pink-6);
+}

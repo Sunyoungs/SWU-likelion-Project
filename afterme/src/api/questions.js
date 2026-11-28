@@ -17,14 +17,14 @@ import {
 // 지금 백엔드 Q&A는 인수인계서(문서) 모듈이 연결돼야 질문을 등록·조회할 수 있다. 연결되면 false로 바꾼다.
 export const USE_MOCK = true;
 
-// 답변 수정 API가 백엔드에 없다. 없는 동안 실제 서버 모드에서는 '답변 수정' 버튼을 숨긴다.
-export const REPLY_EDIT_SUPPORTED = USE_MOCK;
+// 질문 수정 API가 관련 항목 변경을 받지 않는다. 실제 서버 모드에서는 수정 화면의 관련 항목을 바꿀 수 없게 한다.
+export const TOPIC_EDIT_SUPPORTED = USE_MOCK;
 
 const mockResponse = (data) => Promise.resolve(data);
 const notFound = () => Promise.reject(new Error('RESOURCE_NOT_FOUND'));
 const findQuestion = (threadId) => mockQuestionList.find((q) => q.threadId === Number(threadId));
 
-// 첨부: 서버는 업로드한 파일의 주소(url)를 내려준다고 가정한다.
+// 첨부: 서버가 내려주는 url은 토큰이 있어야 받을 수 있는 다운로드 주소다 (openAttachment로 연다).
 // mock에서는 브라우저 임시 주소(createObjectURL)로 대신하며, 새로고침하면 사라진다.
 let nextAttachmentId = 100;
 const toMockAttachments = (files) =>
@@ -46,8 +46,10 @@ export const SORT_OPTIONS = [
 ];
 export const CONTENT_MAX_LENGTH = 1000;
 
-// '관련 항목' 표기: '3. 주요 업무 절차'. 서버가 항목 이름을 주지 않으면 '-'
-export const topicLabel = ({ topicId, topicName }) => (topicName ? `${topicId}. ${topicName}` : '-');
+// '관련 항목' 표기: '3. 주요 업무 절차'. 번호는 인수인계서 안 순서(topicOrder), 없으면 id.
+// 서버가 항목 이름을 주지 않으면 '-'
+export const topicLabel = ({ topicId, topicOrder, topicName }) =>
+  topicName ? `${topicOrder ?? topicId}. ${topicName}` : '-';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -69,27 +71,40 @@ const SERVER_STATUS = { OPEN: 'unresolved', RESOLVED: 'resolved' };
 // 서버에 질문 제목이 없어서, 제목이 없으면 내용 첫 줄을 제목으로 보여 준다.
 const firstLine = (text = '') => text.split('\n')[0];
 
-// 질문: { threadId, projectId, versionId, sectionId, authorId, content, status, revision, replyCount, createdAt, updatedAt }
-// 작성자 이름이 없어서 질문은 후임자, 답변은 전임자 이름(인수인계 참여자)으로 채운다.
+// 질문: { threadId, sectionId, sectionTitle, sectionDisplayOrder, title, content, status, revision,
+//        authorName, createdAt, ... }
+// 작성자 이름이 비어 있으면 질문은 후임자, 답변은 전임자 이름(인수인계 참여자)으로 채운다.
 const normalizeQuestion = (raw, names = {}) => ({
   threadId: raw.threadId,
   status: SERVER_STATUS[raw.status] ?? 'unresolved',
-  title: raw.title ?? firstLine(raw.content),
+  title: raw.title || firstLine(raw.content), // 제목 없이 등록된 예전 질문은 내용 첫 줄
   content: raw.content,
   topicId: raw.sectionId, // 관련 항목 = 인수인계서 섹션
-  topicName: raw.sectionTitle ?? '', // 서버에 없음
+  topicOrder: raw.sectionDisplayOrder ?? null,
+  topicName: raw.sectionTitle ?? '',
   authorName: raw.authorName ?? names.successor ?? '',
   createdAt: raw.createdAt,
   revision: raw.revision, // 수정·답변 요청에 함께 보내야 하는 질문 버전
-  attachments: raw.attachments ?? [], // 서버에 없음
+  attachments: [], // 첨부는 상세 조회에서만 온다
 });
 
-// 답변: { replyId, authorId, content, questionRevision, questionContent, createdAt }
+// 첨부: { attachmentId, fileName, contentType, sizeBytes, downloadUrl }
+const normalizeAttachment = (a) => ({
+  id: a.attachmentId,
+  name: a.fileName,
+  size: a.sizeBytes,
+  contentType: a.contentType,
+  url: a.downloadUrl,
+});
+
+// 답변: { replyId, authorId, authorName, content, questionRevision, questionContent, createdAt }
 // 서버는 답변을 여러 개 받을 수 있지만 화면은 답변 하나만 보여 준다 → 가장 최근 답변
 const normalizeAnswer = (replies, names = {}) => {
   const latest = replies[replies.length - 1];
   if (!latest) return null;
   return {
+    replyId: latest.replyId, // 답변 수정 요청에 쓴다
+    authorId: latest.authorId,
     authorName: latest.authorName ?? names.predecessor ?? '',
     content: latest.content,
     createdAt: latest.createdAt,
@@ -121,11 +136,17 @@ export async function getMyRole(projectId) {
   return { role, teamName };
 }
 
-// 관련 항목(인수인계서 섹션) 목록
-// TODO: 서버에 질문할 수 있는 섹션 목록 API가 없어서 실제 서버 모드에서도 mock을 쓴다.
-// 반환: [{ topicId, topicName }]
-export function getTopics(projectId) {
-  return mockResponse(Object.entries(mockTopics).map(([id, name]) => ({ topicId: Number(id), topicName: name })));
+// 질문할 수 있는 관련 항목(공개된 인수인계서 섹션) 목록
+// GET /handovers/{projectId}/questions/sections → [{ sectionId, versionId, taskId, title, displayOrder }]
+// 반환: [{ topicId, topicOrder, topicName }] (인수인계서 순서대로)
+export async function getTopics(projectId) {
+  if (USE_MOCK) {
+    return Object.entries(mockTopics).map(([id, name]) => ({ topicId: Number(id), topicOrder: Number(id), topicName: name }));
+  }
+  const sections = await axiosClient.get(`/handovers/${projectId}/questions/sections`);
+  return [...(sections ?? [])]
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map((s) => ({ topicId: s.sectionId, topicOrder: s.displayOrder ?? null, topicName: s.title }));
 }
 
 // 질문 목록 조회
@@ -141,8 +162,8 @@ export async function getQuestionList(projectId, { sort = 'latest' } = {}) {
 }
 
 // 질문과 답변 상세 조회
-// GET /handovers/{projectId}/questions/{threadId} → { question, replies }
-// 반환: { threadId, status, title, content, topicId, topicName, authorName, createdAt, revision,
+// GET /handovers/{projectId}/questions/{threadId} → { question, replies, attachments, sectionContent }
+// 반환: { threadId, status, title, content, topicId, topicOrder, topicName, authorName, createdAt, revision,
 //        attachments: [{ id, name, size, contentType, url }],
 //        document: { topicId, topicName, excerpt } | null,        // 질문한 인수인계서 원문
 //        answer: { authorName, content, createdAt, reflection: { version, topicId, topicName } | null } | null }
@@ -162,22 +183,73 @@ export async function getQuestionDetail(projectId, threadId) {
     getNames(projectId),
   ]);
   const question = normalizeQuestion(raw.question, names);
+  const { topicId, topicOrder, topicName } = question;
   return {
     ...question,
-    // 서버에 원문 발췌가 없다. 받으면 { topicId, topicName, excerpt }로 채운다.
-    document: raw.question.sectionExcerpt
-      ? { topicId: question.topicId, topicName: question.topicName, excerpt: raw.question.sectionExcerpt }
-      : null,
+    attachments: (raw.attachments ?? []).map(normalizeAttachment),
+    // 질문한 섹션의 인수인계서 원문. 서버가 주지 않으면 원문 영역을 숨긴다.
+    document: raw.sectionContent ? { topicId, topicOrder, topicName, excerpt: raw.sectionContent } : null,
     answer: normalizeAnswer(raw.replies ?? [], names),
   };
 }
 
+// ---------- 첨부 ----------
+
+// 첨부 파일을 하나씩 올린다. 질문은 이미 저장된 뒤라, 일부가 실패해도 나머지는 올리고 실패한 파일 이름만 돌려준다.
+// POST /handovers/{projectId}/questions/{threadId}/attachments (multipart, file)
+// 서버 규칙: 질문 작성자(후임자)만, 10MB 이하, PDF·PNG·JPG·GIF만
+async function uploadAttachments(projectId, threadId, files) {
+  const results = await Promise.allSettled(
+    files.map((file) => {
+      const form = new FormData();
+      form.append('file', file);
+      return axiosClient.post(`/handovers/${projectId}/questions/${threadId}/attachments`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        skipErrorAlert: true,
+      });
+    }),
+  );
+  return files.filter((_, i) => results[i].status === 'rejected').map((f) => f.name);
+}
+
+// 첨부 삭제. 실패한 파일 이름만 돌려준다.
+// DELETE /handovers/{projectId}/questions/{threadId}/attachments/{attachmentId}
+async function deleteAttachments(projectId, threadId, attachments) {
+  const results = await Promise.allSettled(
+    attachments.map((a) =>
+      axiosClient.delete(`/handovers/${projectId}/questions/${threadId}/attachments/${a.id}`, { skipErrorAlert: true }),
+    ),
+  );
+  return attachments.filter((_, i) => results[i].status === 'rejected').map((a) => a.name);
+}
+
+// 첨부 열기. 다운로드 주소는 토큰이 있어야 받을 수 있어서, 파일을 받아 브라우저 임시 주소로 새 탭에 연다.
+// 팝업 차단을 피하려고 클릭하는 순간 새 탭을 먼저 연 뒤, 파일이 오면 그 탭에 띄운다.
+// GET /handovers/{projectId}/questions/{threadId}/attachments/{attachmentId}
+export async function openAttachment(file) {
+  if (file.url?.startsWith('blob:')) {
+    window.open(file.url, '_blank', 'noopener');
+    return;
+  }
+  const tab = window.open('', '_blank');
+  try {
+    // 서버 주소는 /api로 시작하고, axiosClient가 /api를 앞에 붙이므로 뺀다
+    const blob = await axiosClient.get(file.url.replace(/^\/api/, ''), { responseType: 'blob', skipErrorAlert: true });
+    const url = URL.createObjectURL(new Blob([blob], { type: file.contentType || blob.type }));
+    if (tab) tab.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+  } catch (err) {
+    tab?.close();
+    throw err;
+  }
+}
+
 // ---------- 질문 (후임자) ----------
 
-// 문서 항목에 질문 등록
+// 문서 항목에 질문 등록 후 첨부 업로드
 // POST /handovers/{projectId}/questions
-// 요청: { sectionId, title, content } (서버는 아직 title과 첨부를 받지 않는다)
-// 반환: { threadId }
+// 요청: { sectionId, title, content }
+// 반환: { threadId, failedFiles } (failedFiles: 올리지 못한 첨부 이름. 질문은 등록된 상태)
 export async function createQuestion(projectId, { topicId, title, content, files = [] }) {
   if (USE_MOCK) {
     const threadId = Math.max(0, ...mockQuestionList.map((q) => q.threadId)) + 1;
@@ -193,16 +265,27 @@ export async function createQuestion(projectId, { topicId, title, content, files
       attachments: toMockAttachments(files),
       answer: null,
     });
-    return { threadId };
+    return { threadId, failedFiles: [] };
   }
-  const created = await axiosClient.post(`/handovers/${projectId}/questions`, { sectionId: topicId, title, content });
-  return { threadId: created.threadId };
+  const created = await axiosClient.post(
+    `/handovers/${projectId}/questions`,
+    { sectionId: topicId, title, content },
+    { skipErrorAlert: true },
+  );
+  const failedFiles = await uploadAttachments(projectId, created.threadId, files);
+  return { threadId: created.threadId, failedFiles };
 }
 
-// 후임자가 발송한 질문 수정. revision은 상세 조회에서 받은 질문 버전 (다르면 서버가 409)
+// 후임자가 발송한 질문 수정 후 첨부 정리. revision은 상세 조회에서 받은 질문 버전 (다르면 서버가 409)
 // PATCH /handovers/{projectId}/questions/{threadId}
-// 요청: { revision, title, content } (서버는 관련 항목 변경과 첨부를 받지 않는다)
-export async function updateQuestion(projectId, threadId, { revision, topicId, title, content, files = [], attachments = [] }) {
+// 요청: { revision, title, content } (서버는 관련 항목 변경을 받지 않는다)
+// attachments: 남겨 둘 기존 첨부, originalAttachments: 수정 전 첨부 → 빠진 것은 삭제, files는 새로 업로드
+// 반환: { failedFiles, failedRemovals } (실패한 첨부 이름. 질문 내용은 수정된 상태)
+export async function updateQuestion(
+  projectId,
+  threadId,
+  { revision, topicId, title, content, files = [], attachments = [], originalAttachments = [] },
+) {
   if (USE_MOCK) {
     const question = findQuestion(threadId);
     if (!question) return notFound();
@@ -213,11 +296,22 @@ export async function updateQuestion(projectId, threadId, { revision, topicId, t
       content,
       attachments: [...attachments, ...toMockAttachments(files)],
     });
-    return null;
+    return { failedFiles: [], failedRemovals: [] };
   }
-  await axiosClient.patch(`/handovers/${projectId}/questions/${threadId}`, { revision, title, content });
-  return null;
+  await axiosClient.patch(
+    `/handovers/${projectId}/questions/${threadId}`,
+    { revision, title, content },
+    { skipErrorAlert: true },
+  );
+  const keptIds = new Set(attachments.map((a) => a.id));
+  const removed = originalAttachments.filter((a) => !keptIds.has(a.id));
+  const [failedRemovals, failedFiles] = await Promise.all([
+    deleteAttachments(projectId, threadId, removed),
+    uploadAttachments(projectId, threadId, files),
+  ]);
+  return { failedFiles, failedRemovals };
 }
+
 
 // ---------- 답변 (전임자) ----------
 
@@ -232,14 +326,29 @@ export async function createReply(projectId, threadId, content, questionRevision
     question.status = 'resolved';
     return null;
   }
-  await axiosClient.post(`/handovers/${projectId}/questions/${threadId}/replies`, { questionRevision, content });
+  await axiosClient.post(
+    `/handovers/${projectId}/questions/${threadId}/replies`,
+    { questionRevision, content },
+    { skipErrorAlert: true },
+  );
   return null;
 }
 
-// 답변 수정. 백엔드에 API가 없어 mock으로만 동작한다. (REPLY_EDIT_SUPPORTED)
-export function updateReply(projectId, threadId, content) {
-  const question = findQuestion(threadId);
-  if (!question?.answer) return notFound();
-  question.answer = { ...question.answer, content };
-  return mockResponse(null);
+// 답변 수정. 답변을 쓴 전임자 본인만 수정할 수 있다 (아니면 서버가 403).
+// 해결 상태와 답변 수는 그대로 유지된다.
+// PATCH /handovers/{projectId}/questions/{threadId}/replies/{replyId}
+// 요청: { content }
+export async function updateReply(projectId, threadId, replyId, content) {
+  if (USE_MOCK) {
+    const question = findQuestion(threadId);
+    if (!question?.answer) return notFound();
+    question.answer = { ...question.answer, content };
+    return mockResponse(null);
+  }
+  await axiosClient.patch(
+    `/handovers/${projectId}/questions/${threadId}/replies/${replyId}`,
+    { content },
+    { skipErrorAlert: true },
+  );
+  return null;
 }

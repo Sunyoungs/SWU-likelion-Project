@@ -9,6 +9,7 @@ import BookIcon from '../assets/images/Quiz_listBook.svg';
 import SendIcon from '../assets/images/Quiz_listSend.svg';
 import Illust from '../assets/images/Quiz_resultIllust.png';
 import { getQuizList } from '../api/quiz';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
 import { daysUntil, formatDate, formatDateTime, formatDateWithWeekday } from '../utils/date';
 
@@ -17,10 +18,9 @@ const PAGE_SIZE = 5;
 // 퀴즈 탭 첫 화면(채점 결과 목록): 다음 응시 안내 카드 + 응시 기록 카드 목록
 function QuizList() {
   const { projectId } = useParams();
-  const { data: quizzes, error } = useApi(() => getQuizList(projectId), [projectId]);
+  const { data: quizzes, loading, error, reload } = useApi(() => getQuizList(projectId), [projectId]);
 
-  if (error) return <p>퀴즈 정보를 불러오지 못했어요.</p>;
-  if (!quizzes) return null;
+  if (loading || error) return <LoadState loading={loading} error={error} what="퀴즈 정보" onRetry={reload} />;
 
   // 지금은 프로젝트당 퀴즈 세트가 하나다.
   const quiz = quizzes[0];
