@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import QnAStatus from '../components/QnAStatus';
 import AttachmentItem from '../components/AttachmentItem';
@@ -16,6 +16,7 @@ import {
   createReply,
   updateReply,
   formatRelativeTime,
+  openAttachment,
   topicLabel,
   ROLE_LABEL,
   REPLY_EDIT_SUPPORTED,
@@ -82,6 +83,20 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [fileError, setFileError] = useState(null);
+  // 질문 등록·수정 화면에서 첨부 일부를 처리하지 못했을 때 넘겨주는 안내
+  const notice = useLocation().state?.notice ?? null;
+
+  const open = async (file) => {
+    setFileError(null);
+    try {
+      await openAttachment(file);
+    } catch (err) {
+      // 다시 로그인해야 하는 경우는 공통 로그인 안내 모달이 뜨므로 따로 문구를 띄우지 않는다
+      const message = submitErrorMessage(err);
+      setFileError(message && `'${file.name}' 파일을 열지 못했어요. 잠시 후 다시 시도해 주세요.`);
+    }
+  };
 
   const canSubmit = answer.trim().length > 0 && !submitting;
 
@@ -212,6 +227,12 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
                     <p className={styles.meta}>관련 항목 · {topicLabel(detail)}</p>
                   </div>
 
+                  {notice && (
+                    <p className={styles.fileError} role="status">
+                      {notice}
+                    </p>
+                  )}
+
                   <div className={styles.thread}>
                     {/* 질문자가 참조한 인수인계서 원문 (서버가 주지 않으면 숨긴다) */}
                     {detail.document && (
@@ -226,9 +247,14 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
                       {detail.attachments?.length > 0 && (
                         <div className={styles.attachments}>
                           {detail.attachments.map((file) => (
-                            <AttachmentItem key={file.id} name={file.name} size={file.size} href={file.url} />
+                            <AttachmentItem key={file.id} name={file.name} size={file.size} onOpen={file.url ? () => open(file) : undefined} />
                           ))}
                         </div>
+                      )}
+                      {fileError && (
+                        <p className={styles.fileError} role="alert">
+                          {fileError}
+                        </p>
                       )}
                     </ThreadMessage>
 

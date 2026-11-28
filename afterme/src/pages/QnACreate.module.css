@@ -334,3 +334,15 @@
   text-align: right;
   color: var(--pink-6);
 }
+
+/* 수정 화면에서 바꿀 수 없는 관련 항목 */
+.selectButton:disabled {
+  cursor: default;
+  background-color: var(--blue-0);
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--gray-3);
+}
