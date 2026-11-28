@@ -73,35 +73,50 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
   const { projectId, threadId } = useParams();
   const isPredecessor = me.role === 'predecessor';
 
+  // 새 답변 입력과, 수정 중인 답변(가장 최근 답변)의 입력은 따로 둔다
   const [answer, setAnswer] = useState('');
-  const [editingAnswer, setEditingAnswer] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const answers = detail?.answers ?? [];
+  const latestAnswer = answers[answers.length - 1];
   const canSubmit = answer.trim().length > 0 && !submitting;
+  const canSaveEdit = editText.trim().length > 0 && !submitting;
 
-  const submit = async (request) => {
-    if (!canSubmit) return;
+  const run = async (request) => {
     setSubmitting(true);
     try {
-      // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
-      await request(projectId, threadId, answer.trim(), detail.revision);
-      setAnswer('');
-      setEditingAnswer(false);
+      await request();
       onChanged();
     } finally {
       setSubmitting(false);
     }
   };
 
-  const startEditAnswer = () => {
-    setAnswer(detail.answer.content);
-    setEditingAnswer(true);
+  // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
+  const submitAnswer = () => {
+    if (!canSubmit) return;
+    run(async () => {
+      await createReply(projectId, threadId, answer.trim(), detail.revision);
+      setAnswer('');
+    });
   };
 
-  const cancelEditAnswer = () => {
-    setAnswer('');
-    setEditingAnswer(false);
+  const saveEdit = () => {
+    if (!canSaveEdit) return;
+    run(async () => {
+      await updateReply(projectId, threadId, editingId, editText.trim());
+      setEditingId(null);
+    });
   };
+
+  const startEditAnswer = () => {
+    setEditText(latestAnswer.content);
+    setEditingId(latestAnswer.replyId);
+  };
+
+  const cancelEditAnswer = () => setEditingId(null);
 
   // 하단 버튼: 역할과 질문 상태에 따라 바뀐다
   let footer = null;
@@ -118,29 +133,33 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
           />
         );
       }
-    } else if (!detail.answer) {
-      footer = (
-        <Button
-          text="답변 등록"
-          variant={canSubmit ? 'primary' : 'deactivate'}
-          className={styles.footerButton}
-          onClick={() => submit(createReply)}
-        />
-      );
-    } else if (editingAnswer) {
+    } else if (editingId !== null) {
       footer = (
         <div className={styles.footerGroup}>
           <Button text="취소" variant="white" className={styles.footerButton} onClick={cancelEditAnswer} />
           <Button
             text="수정 완료"
-            variant={canSubmit ? 'primary' : 'deactivate'}
+            variant={canSaveEdit ? 'primary' : 'deactivate'}
             className={styles.footerButton}
-            onClick={() => submit(updateReply)}
+            onClick={saveEdit}
           />
         </div>
       );
-    } else if (REPLY_EDIT_SUPPORTED) {
-      footer = <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />;
+    } else {
+      // 전임자: 답변이 있어도 추가 답변을 달 수 있다. 수정은 가장 최근 답변만
+      footer = (
+        <div className={styles.footerGroup}>
+          {latestAnswer && REPLY_EDIT_SUPPORTED && (
+            <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />
+          )}
+          <Button
+            text="답변 등록"
+            variant={canSubmit ? 'primary' : 'deactivate'}
+            className={styles.footerButton}
+            onClick={submitAnswer}
+          />
+        </div>
+      );
     }
   }
 
@@ -220,43 +239,47 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                       )}
                     </ThreadMessage>
 
-                    {detail.answer && (
+                    {/* 답변은 등록순으로 모두 보여 준다 */}
+                    {answers.map((reply) => (
                       <ThreadMessage
+                        key={reply.replyId}
                         role="predecessor"
-                        authorName={detail.answer.authorName}
-                        createdAt={detail.answer.createdAt}
+                        authorName={reply.authorName}
+                        createdAt={reply.createdAt}
                       >
-                        {editingAnswer ? (
+                        {editingId === reply.replyId ? (
                           <textarea
                             className={`${styles.bubble} ${styles.bubbleAnswer} ${styles.bubbleInput}`}
-                            value={answer}
-                            onChange={(e) => setAnswer(e.target.value)}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
                             aria-label="답변 수정"
                             autoFocus
                           />
                         ) : (
-                          <p className={`${styles.bubble} ${styles.bubbleAnswer}`}>{detail.answer.content}</p>
+                          <p className={`${styles.bubble} ${styles.bubbleAnswer}`}>{reply.content}</p>
                         )}
                       </ThreadMessage>
-                    )}
+                    ))}
                   </div>
                 </div>
 
-                {/* 답변이 반영된 인수인계서 안내 (서버 제공 값) */}
-                {detail.answer?.reflection && (
+                {/* 가장 최근 답변이 반영된 인수인계서 안내 (서버 제공 값) */}
+                {latestAnswer?.reflection && (
                   <p className={styles.reflection}>
                     <img src={CheckIcon} alt="" />
-                    이 답변은 인수인계서 {detail.answer.reflection.version} '{detail.answer.reflection.topicId}.{' '}
-                    {detail.answer.reflection.topicName}'에 반영되었고, 완성도 점수(질문 해결률)에 포함됐어요.
+                    이 답변은 인수인계서 {latestAnswer.reflection.version} '{latestAnswer.reflection.topicId}.{' '}
+                    {latestAnswer.reflection.topicName}'에 반영되었고, 완성도 점수(질문 해결률)에 포함됐어요.
                   </p>
                 )}
 
-                {/* 전임자 · 답변 전: 답변 입력 */}
-                {isPredecessor && !detail.answer && (
+                {/* 전임자: 답변 입력 (답변이 있으면 추가 답변). 답변을 수정하는 동안은 숨긴다 */}
+                {isPredecessor && editingId === null && (
                   <>
                     <hr className={styles.divider} />
                     <div className={styles.answer}>
-                      <label htmlFor="qna-answer" className={styles.answerLabel}>답변 하기</label>
+                      <label htmlFor="qna-answer" className={styles.answerLabel}>
+                        {answers.length ? '추가 답변 하기' : '답변 하기'}
+                      </label>
                       <textarea
                         id="qna-answer"
                         className={styles.answerInput}
