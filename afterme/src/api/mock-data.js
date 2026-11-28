@@ -3,6 +3,8 @@
 // 로그인한 사용자의 역할. 화면 확인용으로 값을 바꿔 가며 쓴다.
 // 'predecessor'(전임자) | 'successor'(후임자)
 export const mockRole = 'successor';
+// 목업에서 로그인한 내 회원 id. 목업 답변은 모두 내가 쓴 것으로 둔다 (전임자로 바꿔 보면 답변 수정 버튼이 보임)
+export const mockUserId = 1;
 
 // 영역(topic). id는 서버가 정한다.
 export const mockTopics = {
@@ -139,6 +141,8 @@ const HOUR_MS = 60 * 60 * 1000;
 const qnaNow = Date.now();
 const iso = (ms) => new Date(ms).toISOString();
 const mockAnswer = (topicId, ms) => ({
+  replyId: topicId,
+  authorId: mockUserId,
   authorName: mockPredecessorName,
   content: '답변 예시',
   createdAt: iso(ms),

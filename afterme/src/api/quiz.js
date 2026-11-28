@@ -195,7 +195,7 @@ export async function submitAttempt(projectId, quizSetId, attemptId, answers) {
   };
   // 제출 직후 결과 화면이 결과를 다시 조회하므로 팀 이름은 여기서 조회하지 않는다
   return normalizeResult(
-    await axiosClient.post(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}/submission`, body),
+    await axiosClient.post(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}/submission`, body, { skipErrorAlert: true }),
     '',
   );
 }
