@@ -15,7 +15,9 @@ import {
   updateQuestion,
   CONTENT_MAX_LENGTH,
 } from '../api/questions';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
+import { submitErrorMessage } from '../utils/apiError';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.gif';
@@ -27,16 +29,26 @@ function QnACreate() {
   const { projectId, threadId } = useParams();
   const isEdit = Boolean(threadId);
 
-  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
-  const { data: topics } = useApi(() => getTopics(projectId), [projectId]);
-  const { data: question, error } = useApi(
+  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const topics$ = useApi(() => getTopics(projectId), [projectId]);
+  const question$ = useApi(
     () => (isEdit ? getQuestionDetail(projectId, threadId) : Promise.resolve(null)),
     [projectId, threadId],
   );
 
-  if (error) return <p>질문을 불러오지 못했어요.</p>;
-  if (!me || !topics || (isEdit && !question)) return null;
-  return <QnAForm key={threadId ?? 'new'} me={me} topics={topics} question={question} />;
+  const requests = [me$, topics$, question$];
+  const failed = requests.find((r) => r.error);
+  if (failed || requests.some((r) => r.loading)) {
+    return (
+      <LoadState
+        loading={!failed}
+        error={failed?.error}
+        what={isEdit ? '질문' : '질문 작성 정보'}
+        onRetry={() => requests.filter((r) => r.error).forEach((r) => r.reload())}
+      />
+    );
+  }
+  return <QnAForm key={threadId ?? 'new'} me={me$.data} topics={topics$.data} question={question$.data} />;
 }
 
 function QnAForm({ me, topics, question }) {
@@ -54,6 +66,7 @@ function QnAForm({ me, topics, question }) {
   const [dragging, setDragging] = useState(false);
   const [topicOpen, setTopicOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const topicRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -87,6 +100,7 @@ function QnAForm({ me, topics, question }) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
+    setSubmitError(null);
     const body = { topicId, title: title.trim(), content: content.trim(), files, attachments, revision: question?.revision };
     try {
       if (isEdit) {
@@ -96,6 +110,15 @@ function QnAForm({ me, topics, question }) {
         const { threadId } = await createQuestion(projectId, body);
         navigate(`/handovers/${projectId}/questions/${threadId}`);
       }
+    } catch (err) {
+      // 실패해도 쓴 내용은 그대로 두고, 버튼 위에 안내만 띄운다
+      setSubmitError(
+        submitErrorMessage(err, {
+          conflict: isEdit
+            ? '그 사이 질문이 바뀌었어요. 새로고침한 뒤 다시 수정해 주세요.'
+            : '지금은 이 항목에 질문을 등록할 수 없어요. 잠시 후 다시 시도해 주세요.',
+        }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -241,6 +264,11 @@ function QnAForm({ me, topics, question }) {
         </div>
 
         <div className={styles.footer}>
+          {submitError && (
+            <p className={styles.submitError} role="alert">
+              {submitError}
+            </p>
+          )}
           <Button
             text={isEdit ? '질문 수정' : '질문 등록'}
             variant="primary"

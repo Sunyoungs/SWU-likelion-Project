@@ -9,6 +9,7 @@ import CorrectIcon from '../assets/images/Quiz_resultCorrect.svg';
 import WrongIcon from '../assets/images/Quiz_resultWrong.svg';
 import Illust from '../assets/images/Quiz_resultIllust.png';
 import { getAttemptResult } from '../api/quiz';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
 import { daysUntil, formatDateTime, formatDateWithWeekday } from '../utils/date';
 
@@ -17,13 +18,12 @@ const RESULT_TYPE_LABEL = { choice: '객관식', short: '주관식' };
 
 function QuizResult() {
   const { projectId, quizSetId, attemptId } = useParams();
-  const { data: result, error } = useApi(
+  const { data: result, loading, error, reload } = useApi(
     () => getAttemptResult(projectId, quizSetId, attemptId),
     [projectId, quizSetId, attemptId],
   );
 
-  if (error) return <p>채점 결과를 불러오지 못했어요.</p>;
-  if (!result) return null;
+  if (loading || error) return <LoadState loading={loading} error={error} what="채점 결과" onRetry={reload} />;
   return <QuizResultView result={result} />;
 }
 

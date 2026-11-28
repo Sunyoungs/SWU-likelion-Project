@@ -7,17 +7,17 @@ import QuizOption from '../components/QuizOption';
 import QuizQuestionCard from '../components/QuizQuestionCard';
 import styles from './QuizExplanation.module.css';
 import { getAttemptResult, questionTypeLabel } from '../api/quiz';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
 
 function QuizExplanation() {
   const { projectId, quizSetId, attemptId } = useParams();
-  const { data, error } = useApi(
+  const { data, loading, error, reload } = useApi(
     () => getAttemptResult(projectId, quizSetId, attemptId),
     [projectId, quizSetId, attemptId],
   );
 
-  if (error) return <p>해설을 불러오지 못했어요.</p>;
-  if (!data) return null;
+  if (loading || error) return <LoadState loading={loading} error={error} what="해설" onRetry={reload} />;
   return <QuizExplanationView questions={data.questions} grading={data.grading} weakAreas={data.weakAreas} />;
 }
 

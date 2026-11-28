@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-// fetcher: Promise를 반환하는 API 함수. deps가 바뀌면 다시 호출한다.
-// 예) const { data, loading, error } = useApi(() => getQuizList(projectId), [projectId]);
+// fetcher: Promise를 반환하는 API 함수. deps가 바뀌거나 reload()를 부르면 다시 호출한다.
+// 예) const { data, loading, error, reload } = useApi(() => getQuizList(projectId), [projectId]);
 export function useApi(fetcher, deps = []) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
+  const [attempt, setAttempt] = useState(0);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,7 +17,7 @@ export function useApi(fetcher, deps = []) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, attempt]);
 
-  return state;
+  return { ...state, reload };
 }

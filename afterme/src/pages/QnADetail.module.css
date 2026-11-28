@@ -337,3 +337,12 @@
   display: flex;
   gap: 12px;
 }
+
+/* 제출 실패 안내 (버튼 위) */
+.submitError {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: right;
+  color: var(--pink-6);
+}

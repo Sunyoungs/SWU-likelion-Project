@@ -195,7 +195,11 @@ export async function createQuestion(projectId, { topicId, title, content, files
     });
     return { threadId };
   }
-  const created = await axiosClient.post(`/handovers/${projectId}/questions`, { sectionId: topicId, title, content });
+  const created = await axiosClient.post(
+    `/handovers/${projectId}/questions`,
+    { sectionId: topicId, title, content },
+    { skipErrorAlert: true },
+  );
   return { threadId: created.threadId };
 }
 
@@ -215,7 +219,11 @@ export async function updateQuestion(projectId, threadId, { revision, topicId, t
     });
     return null;
   }
-  await axiosClient.patch(`/handovers/${projectId}/questions/${threadId}`, { revision, title, content });
+  await axiosClient.patch(
+    `/handovers/${projectId}/questions/${threadId}`,
+    { revision, title, content },
+    { skipErrorAlert: true },
+  );
   return null;
 }
 
@@ -232,7 +240,11 @@ export async function createReply(projectId, threadId, content, questionRevision
     question.status = 'resolved';
     return null;
   }
-  await axiosClient.post(`/handovers/${projectId}/questions/${threadId}/replies`, { questionRevision, content });
+  await axiosClient.post(
+    `/handovers/${projectId}/questions/${threadId}/replies`,
+    { questionRevision, content },
+    { skipErrorAlert: true },
+  );
   return null;
 }
 

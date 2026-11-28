@@ -6,6 +6,7 @@ import styles from './QnA.module.css';
 import SortArrow from '../assets/images/QnA_sortArrow.svg';
 import EmptyPlane from '../assets/images/QnA_emptyPlane.svg';
 import { getMyRole, getQuestionList, SORT_OPTIONS, STATUS_LABEL, formatRelativeTime, topicLabel } from '../api/questions';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
 
 // 역할별 문구. 전임자는 답변할 질문을, 후임자는 내가 올린 질문을 본다.
@@ -30,8 +31,9 @@ function QnA() {
   const { projectId } = useParams();
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('latest');
-  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
-  const { data: questions, error } = useApi(
+  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const me = me$.data;
+  const { data: questions, loading, error, reload } = useApi(
     () => getQuestionList(projectId, { sort }),
     [projectId, sort],
   );
@@ -54,7 +56,7 @@ function QnA() {
   const filterLabel = ({ value, label }) =>
     value === 'all' || list.length === 0 ? label : `${label} ${counts[value]}`;
 
-  if (!me) return null;
+  if (!me) return <LoadState loading={me$.loading} error={me$.error} what="질문 목록" onRetry={me$.reload} />;
 
   return (
     <div className={styles.page}>
@@ -120,7 +122,7 @@ function QnA() {
           ))}
         </div>
 
-        {error && <p className={styles.emptyDesc}>질문 목록을 불러오지 못했어요.</p>}
+        {(loading || error) && <LoadState loading={loading} error={error} what="질문 목록" onRetry={reload} />}
 
         {questions && visible.length === 0 && (
           <div className={styles.empty}>
