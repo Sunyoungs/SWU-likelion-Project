@@ -5,7 +5,7 @@ import Layout from "./components/Layout";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import HandoverList from './pages/HandoverList';
-import HandoverCreate from './pages/HandoverCreate';
+import HandoverFlow from './pages/HandoverFlow';
 import TaskCreate from './pages/TaskCreate';
 import Interview from './pages/Interview';
 import DocumentViewer from './pages/DocumentViewer';
@@ -37,7 +37,19 @@ function App() {
             <Route path="/handovers" element={<HandoverList />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="mypage" element={<Mypage />} />
-            <Route path="handovers/create" element={<HandoverCreate />} />
+            <Route
+              path="/handovers/create"
+              element={
+                <HandoverFlow
+                  organizationId="org-1"
+                  accessToken="dev-token"
+                  currentMemberId="member-1"
+                  requestInviteCode={async () => 'ABCD-1234'}
+                  onPublished={(p, d) => console.log('published', p, d)}
+                  onSaveDraft={async (id, values, files) => console.log('save', id, values, files)}
+                />
+              }
+            />
             <Route path="handovers/:projectId">
               {/* /handovers/:projectId 만 입력하면 인수인계서 열람 화면으로 이동 */}
               <Route index element={<Navigate to="documents" replace />} />
