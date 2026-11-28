@@ -1,0 +1,325 @@
+/* 피그마 프레임 '참여 코드 입력하기' (1440 x 1024) */
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 16px;
+  overflow: hidden;
+  background: linear-gradient(
+    235.21deg,
+    var(--blue-6) 0%,
+    var(--blue-4) 93.03%,
+    var(--blue-1) 132.12%
+  );
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 종이비행기: 회원가입 화면과 같은 값 (피그마에서 모든 화면 같은 좌표, 카드 중앙 기준) */
+.plane {
+  display: none;
+  position: absolute;
+  top: calc(50% - 430px);
+  left: -370px;
+  width: 650px;
+  height: 315px;
+  pointer-events: none;
+}
+
+.plane img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (min-width: 768px) {
+  .plane {
+    display: block;
+  }
+}
+
+/* Frame 508: 500 x 421, pt 25 / pb 30 / px 135, radius 20, blue-1 */
+.card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 25px 24px 30px;
+  border-radius: 20px;
+  background: var(--blue-1);
+}
+
+/* Frame 507: 본문 ↔ 버튼 gap 36 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  width: 230px;
+  max-width: 100%;
+}
+
+/* Frame 501: 로고 블록 ↔ 본문 gap 20 */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Frame 497: 160 x 81 (로고 67 + 텍스트 14) */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  flex-shrink: 0;
+  width: 192px;
+  height: 67px;
+}
+
+.logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Detail 12 R */
+.service {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 14px;
+  letter-spacing: -0.25px;
+  text-align: center;
+  color: var(--gray-6);
+}
+
+/* Frame 509: 안내문 ↔ 입력 영역 gap 20 */
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Detail 14 R */
+.guide {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+  text-align: center;
+  color: #5c5c5c;
+  transition: color 0.15s ease;
+}
+
+/* 피그마 에러 문구 높이 20 → 카드 430 */
+.guideError {
+  line-height: 20px;
+  color: var(--pink-6);
+}
+
+/* Frame 500: 입력창 ↔ 조직 박스 gap 20 */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Frame 498: 라벨 17 + gap 8 + 입력창 30 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+}
+
+/* Frame 493: 230 x 30, px 10, white */
+.input {
+  display: block;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--gray-2);
+}
+
+.input:hover:not(:focus):not(:disabled) {
+  box-shadow: 0 0 0 1px var(--blue-3);
+}
+
+.input:focus {
+  box-shadow: 0 0 0 2px var(--blue-6);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Frame 511: 초대받은 조직 박스 (p 10, gap 8, white) */
+.org {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  background: #fff;
+}
+
+.orgLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 14px;
+  letter-spacing: -0.25px;
+  color: var(--gray-3);
+}
+
+/* Frame 510: 조직명 + 역할 (14px, 17 + 17) */
+.orgInfo {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+}
+
+.orgName {
+  margin: 0;
+  color: var(--gray-10);
+}
+
+.orgRole {
+  margin: 0;
+  color: var(--gray-4);
+}
+
+/* 조회 전 / 실패 시 빈 영역 (피그마 211 x 40) */
+.orgEmpty {
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
+
+.orgLoading {
+  font-size: 12px;
+  letter-spacing: -0.25px;
+  color: var(--gray-2);
+}
+
+/* 피그마 Button: 230 x 41, radius 12, border g50, shadow 4 4 10 rgba(124,124,125,.15), Body 14 M */
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 41px;
+  padding: 0 38px;
+  border: 1px solid var(--gray-1);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 4px 4px 10px 0 rgba(124, 124, 125, 0.15);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 17px;
+  letter-spacing: -0.25px;
+  color: var(--gray-6);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+/* 로그인 화면과 동일한 hover 인터랙션 */
+.submit:hover:not(:disabled),
+.submit.loading {
+  border-color: transparent;
+  background: linear-gradient(to right, var(--blue-6), var(--blue-4));
+  color: #fff;
+}
+
+.submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--blue-6);
+  outline-offset: 2px;
+}
+
+/* 피그마 Button state=notice: pink-2 배경, pink-10 Bold */
+.submit.submitError,
+.submit.submitError:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--pink-2);
+  font-weight: 700;
+  color: var(--pink-10);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit.loading:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide,
+  .input,
+  .submit {
+    transition: none;
+  }
+}
