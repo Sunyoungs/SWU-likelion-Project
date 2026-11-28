@@ -14,9 +14,6 @@ import { daysUntil, formatDate, formatDateTime, formatDateWithWeekday } from '..
 
 const PAGE_SIZE = 5;
 
-// 'n차 퀴즈' / 'n차 퀴즈 (재응시)'
-const roundLabel = ({ round, retake }) => `${round}차 퀴즈${retake ? ' (재응시)' : ''}`;
-
 // 퀴즈 탭 첫 화면(채점 결과 목록): 다음 응시 안내 카드 + 응시 기록 카드 목록
 function QuizList() {
   const { projectId } = useParams();
@@ -41,7 +38,7 @@ function QuizListView({ quiz }) {
 
   const latest = attempts[0];
   const subtitle = latest
-    ? [teamName && `${teamName} 인수인계`, `${formatDateTime(latest.submittedAt)} 제출`, `${attempts.length}회차`]
+    ? [teamName && `${teamName} 인수인계`, `${formatDateTime(latest.submittedAt)} 제출`, `${latest.round}회차`]
         .filter(Boolean)
         .join(' · ')
     : '인수인계서 내용을 얼마나 이해했는지 확인해요';
@@ -54,7 +51,7 @@ function QuizListView({ quiz }) {
       <div className={styles.top}>
         <div className={styles.head}>
           {/* 아직 응시 기록이 없으면 '채점 결과' 대신 사이드바 메뉴와 같은 이름 (시안 없음) */}
-          <h1 className={styles.title}>{latest ? '채점 결과' : '인수인계 퀴즈'}</h1>
+          <h1 className={styles.title}>{latest ? '채점 결과 목록' : '인수인계 퀴즈'}</h1>
           {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         </div>
 
@@ -108,7 +105,7 @@ function NextAttemptCard({ next, questionCount, passCount, onStart }) {
             <img src={StatsIcon} alt="" className={styles.statsIcon} />
           </span>
           <span>
-            {roundLabel(next)} - {when} 응시할 수 있어요.
+            {next.round}차 퀴즈 - {when} 응시할 수 있어요.
           </span>
         </div>
 
@@ -136,7 +133,7 @@ function NextAttemptCard({ next, questionCount, passCount, onStart }) {
       </div>
 
       <Button
-        text={`${next.round}차 테스트 보기`}
+        text={`${next.round}차 퀴즈 보기`}
         variant={available ? 'primary' : 'deactivate'}
         className={styles.cardButton}
         onClick={available ? onStart : undefined}

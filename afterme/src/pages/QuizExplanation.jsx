@@ -6,7 +6,7 @@ import QuizNumber from '../components/QuizNumber';
 import QuizOption from '../components/QuizOption';
 import QuizQuestionCard from '../components/QuizQuestionCard';
 import styles from './QuizExplanation.module.css';
-import { getAttemptResult, TYPE_LABEL } from '../api/quiz';
+import { getAttemptResult, questionTypeLabel } from '../api/quiz';
 import { useApi } from '../hooks/useApi';
 
 function QuizExplanation() {
@@ -28,7 +28,7 @@ function QuizExplanationView({ questions, grading, weakAreas }) {
   const isCorrect = (q) => grading[q.id].correct;
   // 문서 화면에서 돌아온 경우 보고 있던 문항을 복원한다. (state.questionId)
   const restoredIndex = questions.findIndex((q) => q.id === state?.questionId);
-  const [currentIndex, setCurrentIndex] = useState(restoredIndex >= 0 ? restoredIndex : 2);
+  const [currentIndex, setCurrentIndex] = useState(restoredIndex >= 0 ? restoredIndex : 0);
   const current = questions[currentIndex];
   const currentGrading = grading[current.id];
 
@@ -87,6 +87,7 @@ function QuizExplanationView({ questions, grading, weakAreas }) {
               navigate(`/handovers/${projectId}/documents`, {
                 state: {
                   topicId: current.topicId,
+                  sectionId: current.sectionId, // 서버가 주는 근거 섹션 id
                   returnTo: {
                     path: `/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}/explanations`,
                     state: { questionId: current.id },
@@ -100,7 +101,7 @@ function QuizExplanationView({ questions, grading, weakAreas }) {
         <section className={styles.main}>
           <QuizQuestionCard
             number={currentIndex + 1}
-            typeLabel={`${TYPE_LABEL[current.type]} · ${current.category}`}
+            typeLabel={questionTypeLabel(current)}
             text={current.text}
           >
             {current.options && (
