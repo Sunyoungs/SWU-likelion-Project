@@ -3,6 +3,7 @@ import { getProjectInfo } from './project';
 import {
   mockRole,
   mockTeamName,
+  mockUserId,
   mockTopics,
   mockQuestionList,
   mockSuccessorName,
@@ -15,7 +16,7 @@ import {
 
 // 백엔드 연결 전에는 true → 목업 데이터로 화면 확인
 // 지금 백엔드 Q&A는 인수인계서(문서) 모듈이 연결돼야 질문을 등록·조회할 수 있다. 연결되면 false로 바꾼다.
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 
 // 질문 수정 API가 관련 항목 변경을 받지 않는다. 실제 서버 모드에서는 수정 화면의 관련 항목을 바꿀 수 없게 한다.
 export const TOPIC_EDIT_SUPPORTED = USE_MOCK;
@@ -130,10 +131,14 @@ const getNames = (projectId) =>
 // 이 인수인계에서 내 역할과 팀 이름
 // GET /handovers/{projectId} → myRoles, roleName
 // 반환: { role: 'predecessor' | 'successor', teamName }
-export async function getMyRole(projectId) {
-  if (USE_MOCK) return { role: mockRole, teamName: mockTeamName };
-  const { role, teamName } = await getProjectInfo(projectId);
-  return { role, teamName };
+// withUserId: 내 회원 id(GET /users/me의 id)도 함께 받는다. 답변 작성자(authorId)와 비교할 때 쓴다.
+export async function getMyRole(projectId, { withUserId = false } = {}) {
+  if (USE_MOCK) return { role: mockRole, teamName: mockTeamName, ...(withUserId && { userId: mockUserId }) };
+  const [{ role, teamName }, user] = await Promise.all([
+    getProjectInfo(projectId),
+    withUserId ? axiosClient.get('/users/me') : null,
+  ]);
+  return { role, teamName, ...(withUserId && { userId: user?.id ?? null }) };
 }
 
 // 질문할 수 있는 관련 항목(공개된 인수인계서 섹션) 목록

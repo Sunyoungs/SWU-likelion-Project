@@ -49,7 +49,7 @@ function QnADetail() {
   // 답변 등록 · 수정 후 상세와 목록을 다시 불러오기 위한 키
   const [reloadKey, setReloadKey] = useState(0);
 
-  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const me$ = useApi(() => getMyRole(projectId, { withUserId: true }), [projectId]);
   const me = me$.data;
   const { data: questions } = useApi(() => getQuestionList(projectId), [projectId, reloadKey]);
   const { data: detail, loading, error, reload } = useApi(
@@ -173,8 +173,8 @@ function QnADetailView({ me, questions, detail, loading, error, onRetry, onChang
           />
         </div>
       );
-    } else {
-      // 답변을 쓴 전임자 본인만 수정할 수 있다. 다른 전임자가 누르면 서버가 403을 주고 안내가 뜬다.
+    } else if (detail.answer.authorId === me.userId) {
+      // 답변을 쓴 전임자 본인만 수정할 수 있다 (답변 authorId = 내 회원 id)
       footer = <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />;
     }
   }
