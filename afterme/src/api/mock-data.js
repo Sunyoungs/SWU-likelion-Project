@@ -13,27 +13,42 @@ export const mockTopics = {
   5: '업무 개요 · 참고 자료',
 };
 
-// 퀴즈 세트 목록. 응시 기록(attempts)과 다음 응시 정보(nextAttempt)는 서버가 내려준다.
-// - attempts: 최신 응시가 앞. round는 n차, retake는 같은 회차를 다시 본 응시(미달 후 재응시)인지
-// - nextAttempt: 다음에 볼 수 있는 응시. availableAt이 지났으면 지금 응시 가능, 더 볼 응시가 없으면 null
-// 처음 응시 전 화면을 보려면 attempts를 []로, nextAttempt를 { round: 1, retake: false, availableAt: 지금 }으로 바꾼다.
+// 퀴즈 목록 응답 (서버 모양 그대로). api/quiz.js가 실제 응답과 같은 변환을 거쳐 화면에 넘긴다.
+// - attempts: 내 응시 기록, 최신이 앞. 백엔드 목록에는 아직 없는 필드다.
+// - nextAllowedAt: 서버 규칙대로 미통과면 제출 3일 뒤, 통과면 null. 다음 응시 가능일은 이 값으로 보여 준다.
+// 처음 응시 전 화면을 보려면 attempts를 []로 바꾼다.
 const QUIZ_DAY_MS = 24 * 60 * 60 * 1000;
 const quizNow = Date.now();
 const quizIso = (days) => new Date(quizNow + days * QUIZ_DAY_MS).toISOString();
-export const mockQuizList = [
-  {
-    id: 1,
-    title: '인수인계 퀴즈 1',
-    questionCount: 10,
-    passingScore: 80,
-    attempts: [
-      { attemptId: 3, round: 1, retake: true, score: 9, total: 10, passed: true, submittedAt: quizIso(0) },
-      { attemptId: 2, round: 1, retake: true, score: 7, total: 10, passed: false, submittedAt: quizIso(-4) },
-      { attemptId: 1, round: 1, retake: false, score: 5, total: 10, passed: false, submittedAt: quizIso(-8) },
-    ],
-    nextAttempt: { round: 2, retake: false, availableAt: quizIso(19) },
-  },
-];
+const RETAKE_WAIT_DAYS = 3;
+const mockAttempt = (attemptNo, correctCount, daysAgo, passingScore) => {
+  const passed = correctCount * 100 >= passingScore * 10;
+  return {
+    attemptId: attemptNo,
+    attemptNo,
+    correctCount,
+    totalCount: 10,
+    score: correctCount * 10,
+    passed,
+    submittedAt: quizIso(-daysAgo),
+    nextAllowedAt: passed ? null : quizIso(-daysAgo + RETAKE_WAIT_DAYS),
+  };
+};
+export const mockQuizPage = {
+  items: [
+    {
+      quizSetId: 1,
+      versionId: 1,
+      passingScore: 80,
+      questionCount: 10,
+      attempts: [mockAttempt(2, 7, 1, 80), mockAttempt(1, 5, 5, 80)],
+    },
+  ],
+  page: 0,
+  size: 20,
+  totalElements: 1,
+  totalPages: 1,
+};
 
 const OPTIONS = ['보기 1', '보기 2', '보기 3', '보기 4'];
 

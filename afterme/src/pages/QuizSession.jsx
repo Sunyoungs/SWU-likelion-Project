@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
@@ -7,27 +7,32 @@ import QuizOption from '../components/QuizOption';
 import QuizQuestionCard from '../components/QuizQuestionCard';
 import styles from './QuizSession.module.css';
 import CheckIcon from '../assets/images/Quiz_check.svg';
-import { startAttempt, getAttemptQuestions, submitAttempt, TYPE_LABEL } from '../api/quiz';
+import {
+  startAttempt,
+  getAttemptQuestions,
+  submitAttempt,
+  questionTypeLabel,
+  isQuizConflict,
+  isQuizForbidden,
+} from '../api/quiz';
 import { useApi } from '../hooks/useApi';
 
 function QuizSession() {
   const { projectId, quizSetId } = useParams();
 
   // 화면에 들어오면 응시를 시작(POST)하고, 발급된 attemptId로 문항을 조회한다.
-  // 개발 모드(StrictMode)에서 effect가 두 번 실행돼도 응시가 두 번 만들어지지 않도록 요청을 ref에 보관한다.
-  const startRef = useRef(null);
-  const { data, error } = useApi(() => {
-    const key = `${projectId}/${quizSetId}`;
-    if (startRef.current?.key !== key) {
-      const promise = startAttempt(projectId, quizSetId).then(async ({ attemptId }) => ({
+  // 제출하지 않은 응시가 있으면 서버가 그 응시를 돌려주므로, 시작 요청이 두 번 가도 응시는 하나만 생긴다.
+  const { data, error } = useApi(
+    () =>
+      startAttempt(projectId, quizSetId).then(async ({ attemptId }) => ({
         attemptId,
         quizSet: await getAttemptQuestions(projectId, quizSetId, attemptId),
-      }));
-      startRef.current = { key, promise };
-    }
-    return startRef.current.promise;
-  }, [projectId, quizSetId]);
+      })),
+    [projectId, quizSetId],
+  );
 
+  if (isQuizConflict(error)) return <p>아직 다시 응시할 수 없어요. 재응시 가능일 이후에 다시 시도해 주세요.</p>;
+  if (isQuizForbidden(error)) return <p>퀴즈는 후임자만 응시할 수 있어요.</p>;
   if (error) return <p>퀴즈를 불러오지 못했어요.</p>;
   if (!data) return null;
   return <QuizSessionView quizSet={data.quizSet} attemptId={data.attemptId} />;
@@ -83,7 +88,8 @@ function QuizSessionView({ quizSet, attemptId }) {
 
   const summary = [
     teamName && `${teamName} 인수인계`,
-    `총 ${total}문항 (객관식 ${choiceCount}, 단답형 ${shortCount})`,
+    // 한 유형만 있으면 괄호 안 내역은 생략한다 (지금 서버는 객관식만 만든다)
+    choiceCount && shortCount ? `총 ${total}문항 (객관식 ${choiceCount}, 단답형 ${shortCount})` : `총 ${total}문항`,
     `통과 기준 ${passingScore}%`,
   ]
     .filter(Boolean)
@@ -128,7 +134,7 @@ function QuizSessionView({ quizSet, attemptId }) {
         <section className={styles.main}>
           <QuizQuestionCard
             number={currentIndex + 1}
-            typeLabel={`${TYPE_LABEL[current.type]} · ${current.category}`}
+            typeLabel={questionTypeLabel(current)}
             text={current.text}
             error={showError}
           >

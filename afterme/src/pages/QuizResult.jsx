@@ -34,7 +34,8 @@ function QuizResultView({ result }) {
   const items = result.items.map((item, index) => ({
     no: index + 1,
     type: RESULT_TYPE_LABEL[item.type],
-    topic: `${item.topicId}. ${item.topicName}`,
+    // 영역 번호가 있으면 '1. 영역명', 없으면(서버 응답) 영역명만
+    topic: item.topicId != null ? `${item.topicId}. ${item.topicName}` : item.topicName,
     correct: item.correct,
     note: item.aiEvaluation,
   }));
@@ -43,16 +44,15 @@ function QuizResultView({ result }) {
   const retakeInDays = retakeAt ? daysUntil(retakeAt) : 0;
   const canRetake = retakeAt !== null && retakeInDays <= 0;
 
-  const total = items.length;
-  const score = items.filter((item) => item.correct).length;
+  // 맞힌 수와 통과 여부는 서버가 채점한 값을 쓴다
+  const { correctCount: score, totalCount: total, passed } = result;
   const passCount = Math.ceil((total * passingScore) / 100);
   const shortage = Math.max(passCount - score, 0);
-  const passed = shortage === 0;
 
   const subtitle = [
     teamName && `${teamName} 인수인계`,
     `${formatDateTime(submittedAt)} 제출`,
-    `${attempt}회차`,
+    attempt && `${attempt}회차`,
   ]
     .filter(Boolean)
     .join(' · ');
