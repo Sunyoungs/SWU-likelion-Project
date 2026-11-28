@@ -15,14 +15,16 @@ import {
   isQuizConflict,
   isQuizForbidden,
 } from '../api/quiz';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
+import { submitErrorMessage } from '../utils/apiError';
 
 function QuizSession() {
   const { projectId, quizSetId } = useParams();
 
   // 화면에 들어오면 응시를 시작(POST)하고, 발급된 attemptId로 문항을 조회한다.
   // 제출하지 않은 응시가 있으면 서버가 그 응시를 돌려주므로, 시작 요청이 두 번 가도 응시는 하나만 생긴다.
-  const { data, error } = useApi(
+  const { data, loading, error, reload } = useApi(
     () =>
       startAttempt(projectId, quizSetId).then(async ({ attemptId }) => ({
         attemptId,
@@ -33,8 +35,7 @@ function QuizSession() {
 
   if (isQuizConflict(error)) return <p>아직 다시 응시할 수 없어요. 재응시 가능일 이후에 다시 시도해 주세요.</p>;
   if (isQuizForbidden(error)) return <p>퀴즈는 후임자만 응시할 수 있어요.</p>;
-  if (error) return <p>퀴즈를 불러오지 못했어요.</p>;
-  if (!data) return null;
+  if (loading || error) return <LoadState loading={loading} error={error} what="퀴즈" onRetry={reload} />;
   return <QuizSessionView quizSet={data.quizSet} attemptId={data.attemptId} />;
 }
 
@@ -46,6 +47,7 @@ function QuizSessionView({ quizSet, attemptId }) {
   const [answers, setAnswers] = useState({ });
   const [showError, setShowError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const total = questions.length;
   const current = questions[currentIndex];
   const isAnswered = (q) => answers[q.id] !== undefined && answers[q.id] !== '';
@@ -78,9 +80,15 @@ function QuizSessionView({ quizSet, attemptId }) {
   const handleSubmit = async () => {
     if (submitting) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       await submitAttempt(projectId, quizSetId, attemptId, answers);
       navigate(`/handovers/${projectId}/quizzes/${quizSetId}/attempts/${attemptId}`);
+    } catch (err) {
+      // 실패해도 고른 답은 그대로 두고, 버튼 위에 안내만 띄운다
+      setSubmitError(
+        submitErrorMessage(err, { conflict: '이미 제출했거나 제출할 수 없는 응시예요. 퀴즈 목록에서 확인해 주세요.' }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -162,7 +170,7 @@ function QuizSessionView({ quizSet, attemptId }) {
 
           <div className={styles.navWrap}>
             <p className={styles.errorText} role="alert">
-              {showError ? '답을 선택해 주세요.' : ''}
+              {showError ? '답을 선택해 주세요.' : submitError ?? ''}
             </p>
             <div className={styles.nav}>
               <Button
