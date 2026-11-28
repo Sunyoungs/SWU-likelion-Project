@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isSessionEnded, notifyUnauthorized } from './authEvents';
 
 const axiosClient = axios.create({
   baseURL: process.env.REACT_APP_API_BASE_URL || '/api',
@@ -21,6 +22,9 @@ axiosClient.interceptors.response.use(
     return response.data?.data || response.data;
   },
   (error) => {
+    // 로그인 상태가 없거나 끝났으면 화면마다 따로 처리하지 않고 Layout이 공통 안내 화면을 띄운다.
+    if (isSessionEnded(error)) notifyUnauthorized();
+
     if (error.config?.skipErrorAlert) return Promise.reject(error);
 
     const errorData = error.response?.data;
