@@ -16,7 +16,9 @@ import {
   createReply,
   updateReply,
   formatRelativeTime,
+  topicLabel,
   ROLE_LABEL,
+  REPLY_EDIT_SUPPORTED,
 } from '../api/questions';
 import { useApi } from '../hooks/useApi';
 
@@ -81,7 +83,8 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await request(projectId, threadId, answer.trim());
+      // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
+      await request(projectId, threadId, answer.trim(), detail.revision);
       setAnswer('');
       setEditingAnswer(false);
       onChanged();
@@ -136,7 +139,7 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
           />
         </div>
       );
-    } else {
+    } else if (REPLY_EDIT_SUPPORTED) {
       footer = <Button text="답변 수정" variant="white" className={styles.footerButton} onClick={startEditAnswer} />;
     }
   }
@@ -194,17 +197,17 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                       <img src={DocumentIcon} alt="" />
                       <h2 className={styles.questionTitle}>{detail.title}</h2>
                     </div>
-                    <p className={styles.meta}>관련 항목 · {detail.topicId}. {detail.topicName}</p>
+                    <p className={styles.meta}>관련 항목 · {topicLabel(detail)}</p>
                   </div>
 
                   <div className={styles.thread}>
-                    {/* 질문자가 참조한 인수인계서 원문 */}
-                    <div className={styles.document}>
-                      <p className={styles.documentLabel}>
-                        인수인계서 원문 · {detail.document.topicId}. {detail.document.topicName}
-                      </p>
-                      <p className={styles.documentText}>{detail.document.excerpt}</p>
-                    </div>
+                    {/* 질문자가 참조한 인수인계서 원문 (서버가 주지 않으면 숨긴다) */}
+                    {detail.document && (
+                      <div className={styles.document}>
+                        <p className={styles.documentLabel}>인수인계서 원문 · {topicLabel(detail.document)}</p>
+                        <p className={styles.documentText}>{detail.document.excerpt}</p>
+                      </div>
+                    )}
 
                     <ThreadMessage role="successor" authorName={detail.authorName} createdAt={detail.createdAt}>
                       <p className={styles.bubble}>{detail.content}</p>
