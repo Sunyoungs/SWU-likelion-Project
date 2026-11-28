@@ -6,7 +6,7 @@ import bellIcon from '../assets/images/icon-bell.svg';
 import toolIcon from '../assets/images/icon-tool.svg';
 import avatarImg from '../assets/images/profile-avatar.svg';
 import { getMe, updateMe } from '../api/user';
-import { clearTokens } from '../api/auth';
+import { clearTokens, logout } from '../api/auth';
 
 const NAME_MAX = 50; // API 명세: 필수, 공백만 불가, 최대 50자
 
@@ -168,6 +168,22 @@ export default function Mypage() {
     // TODO: 여기에 알림 설정 변경 API 호출
   };
 
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // 로그아웃: 서버 요청이 실패해도 토큰은 지워지므로 항상 로그인 화면으로 이동
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // 토큰은 logout() 안에서 이미 지워짐
+    } finally {
+      setIsLoggingOut(false);
+      navigate('/login');
+    }
+  };
+
   const handleWithdraw = async () => {
     const ok = window.confirm(
       '정말 탈퇴하시겠어요?\n작성한 인수인계서와 Q&A는 동아리(조직)에 그대로 남아요.',
@@ -307,7 +323,21 @@ export default function Mypage() {
             계정 관리
           </SectionTitle>
 
-          <div className={styles.box}>
+          <div className={`${styles.box} ${styles.accountBox}`}>
+            <div className={`${styles.row} ${styles.rowAccount}`}>
+              <div className={styles.rowText}>
+                <p className={styles.accountTitle}>로그아웃</p>
+                <p className={styles.accountDesc}>이 기기에서 로그아웃해요.</p>
+              </div>
+              <button
+                type="button"
+                className={styles.logoutButton}
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? '로그아웃 중…' : '로그아웃'}
+              </button>
+            </div>
             <div className={`${styles.row} ${styles.rowAccount}`}>
               <div className={styles.rowText}>
                 <p className={styles.accountTitle}>회원 탈퇴</p>
