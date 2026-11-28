@@ -20,7 +20,9 @@ import {
   ROLE_LABEL,
   REPLY_EDIT_SUPPORTED,
 } from '../api/questions';
+import LoadState from '../components/LoadState';
 import { useApi } from '../hooks/useApi';
+import { submitErrorMessage } from '../utils/apiError';
 
 const ANSWER_PLACEHOLDER =
   '답변을 구체적으로 입력하세요.\n관련 업무 항목이나 상황을 함께 적으면 후임자가 더 명확하게 이해할 수 있습니다.';
@@ -47,14 +49,15 @@ function QnADetail() {
   // 답변 등록 · 수정 후 상세와 목록을 다시 불러오기 위한 키
   const [reloadKey, setReloadKey] = useState(0);
 
-  const { data: me } = useApi(() => getMyRole(projectId), [projectId]);
+  const me$ = useApi(() => getMyRole(projectId), [projectId]);
+  const me = me$.data;
   const { data: questions } = useApi(() => getQuestionList(projectId), [projectId, reloadKey]);
-  const { data: detail, error } = useApi(
+  const { data: detail, loading, error, reload } = useApi(
     () => getQuestionDetail(projectId, threadId),
     [projectId, threadId, reloadKey],
   );
 
-  if (!me) return null;
+  if (!me) return <LoadState loading={me$.loading} error={me$.error} what="질문" onRetry={me$.reload} />;
   return (
     <QnADetailView
       // 다른 질문으로 이동하면 입력 상태를 초기화한다
@@ -62,13 +65,15 @@ function QnADetail() {
       me={me}
       questions={questions ?? []}
       detail={detail}
+      loading={loading}
       error={error}
+      onRetry={reload}
       onChanged={() => setReloadKey((k) => k + 1)}
     />
   );
 }
 
-function QnADetailView({ me, questions, detail, error, onChanged }) {
+function QnADetailView({ me, questions, detail, loading, error, onRetry, onChanged }) {
   const navigate = useNavigate();
   const { projectId, threadId } = useParams();
   const isPredecessor = me.role === 'predecessor';
@@ -76,18 +81,25 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
   const [answer, setAnswer] = useState('');
   const [editingAnswer, setEditingAnswer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const canSubmit = answer.trim().length > 0 && !submitting;
 
   const submit = async (request) => {
     if (!canSubmit) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       // 답변 등록은 질문 버전(revision)을 함께 보낸다. 그 사이 질문이 수정됐으면 서버가 거절한다.
       await request(projectId, threadId, answer.trim(), detail.revision);
       setAnswer('');
       setEditingAnswer(false);
       onChanged();
+    } catch (err) {
+      // 실패해도 쓴 답변은 그대로 두고, 버튼 위에 안내만 띄운다
+      setSubmitError(
+        submitErrorMessage(err, { conflict: '그 사이 질문이 수정됐어요. 새로고침한 뒤 다시 등록해 주세요.' }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -187,7 +199,7 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
 
         {/* 오른쪽: 질문 상세 */}
         <section className={styles.main}>
-          {error && <p className={styles.sideLabel}>질문을 불러오지 못했어요.</p>}
+          {(loading || error) && <LoadState loading={loading} error={error} what="질문" onRetry={onRetry} />}
           {detail && (
             <>
               <div className={styles.content}>
@@ -269,6 +281,11 @@ function QnADetailView({ me, questions, detail, error, onChanged }) {
                 )}
               </div>
 
+              {submitError && (
+                <p className={styles.submitError} role="alert">
+                  {submitError}
+                </p>
+              )}
               {footer}
             </>
           )}
